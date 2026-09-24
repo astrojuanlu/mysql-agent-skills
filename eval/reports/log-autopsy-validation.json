@@ -1,0 +1,353 @@
+{
+  "schema": 2,
+  "runs_file": "../eval/runs/log-autopsy-validation.jsonl",
+  "condition": {
+    "model": null,
+    "loaded_skills": [
+      "charmed-mysql-fault-injection",
+      "charmed-mysql-juju-inspect",
+      "charmed-mysql-log-autopsy",
+      "charmed-mysql-nightly-triage",
+      "juju-cli"
+    ],
+    "queries_file": "../eval/charmed-mysql-log-autopsy-validation.json",
+    "max_tool_calls": 12,
+    "num_runs": ":auto:",
+    "retries": 1,
+    "ts": "2026-09-28 19:52:09"
+  },
+  "intended_skills": [
+    "charmed-mysql-log-autopsy",
+    "charmed-mysql-nightly-triage"
+  ],
+  "n_queries": 8,
+  "n_runs": 8,
+  "skill_rows": [
+    {
+      "skill": "charmed-mysql-fault-injection",
+      "view": "cross-trigger",
+      "runs": 8,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-juju-inspect",
+      "view": "cross-trigger",
+      "runs": 8,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-log-autopsy",
+      "view": "expected",
+      "runs": 8,
+      "hits": 7,
+      "rate": 0.875,
+      "decision": "PASS"
+    },
+    {
+      "skill": "charmed-mysql-log-autopsy",
+      "view": "cross-trigger",
+      "runs": 0,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-nightly-triage",
+      "view": "expected",
+      "runs": 1,
+      "hits": 1,
+      "rate": 1.0,
+      "decision": "PASS"
+    },
+    {
+      "skill": "charmed-mysql-nightly-triage",
+      "view": "cross-trigger",
+      "runs": 7,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "juju-cli",
+      "view": "cross-trigger",
+      "runs": 8,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "(should-not queries)",
+      "view": "should-not",
+      "runs": 0,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": "PASS"
+    }
+  ],
+  "class_summaries": [
+    {
+      "query_class": "should-trigger",
+      "passed": 8,
+      "total": 8,
+      "pass_rate": 1.0,
+      "runs_taken": {
+        "min": 1,
+        "median": 1.0,
+        "max": 1
+      }
+    },
+    {
+      "query_class": "should-not",
+      "passed": 0,
+      "total": 0,
+      "pass_rate": 0.0,
+      "runs_taken": null
+    }
+  ],
+  "queries": [
+    {
+      "index": 0,
+      "query": "Customer attached their juju debug-log replay and the final juju status output. mysql-k8s/2 shows error state since this morning. No way for us to SSH in. Can you diagnose what happened from these files?",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 1,
+      "query": "Here is the TO execution metadata: artefact 406435, execution 494482, result 10697360. Plus the pod logs in the tarball I extracted to /tmp/bundle. Figure out the failure mode and how confident you are.",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy",
+        "charmed-mysql-nightly-triage"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": true,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 2,
+      "query": "I need a post-mortem from the captured evidence only: the app went blocked at 19:25:28 and active again at 19:26:08 per status-log. Meanwhile the requirer never recovered. Walk me through what the logs show happened in those 40 seconds.",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 3,
+      "query": "Help me interpret this crashdump: pod/mysql-k8s-0.log has 'Deferring database-relation-changed' three times but no 'Re-emitting deferred event' afterwards, and the app status is stuck in maintenance. What does that mean?",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 4,
+      "query": "Is this a charm bug or a test bug? The charm-integration-testing plan fails at test_deploy with the offer side blocked 'Ready to create replication'. I only have the CI job log and the bundle, no cluster.",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 5,
+      "query": "read this traceback from the unit log and tell me which line of charm source produced it and whether the fix is already on 8.0/edge: 'File \"/var/lib/juju/agents/unit-mysql-k8s-0/charm/src/relations/mysql_provider.py\", line 148, in _on_database_requested RuntimeError: Failed to resolve canonical name for target-replicas'",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 6,
+      "query": "we captured a juju crashdump during the outage window. status-log shows the unit went maintenance 'Unable to get member state' then blocked 'failed to recover cluster'. explain the sequence from the files, we can't touch the deployment right now.",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 7,
+      "query": "From the attached bundle: grep shows 'ops 2.23.1 up and running' in the logs and the charm revision is 423. Before we dig in, tell me exactly which charm branch and dependency versions we should be reading to analyze this.",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    }
+  ],
+  "effort": {
+    "total_tokens": 2702.5,
+    "output_tokens": 106.5,
+    "cost": 0.0,
+    "tool_calls": 1.0,
+    "wall_s": 3.0
+  },
+  "effort_by_class": {
+    "should-trigger": {
+      "total_tokens": 2702.5,
+      "output_tokens": 106.5,
+      "cost": 0.0,
+      "tool_calls": 1.0,
+      "wall_s": 3.0
+    },
+    "should-not": {
+      "total_tokens": null,
+      "output_tokens": null,
+      "cost": null,
+      "tool_calls": null,
+      "wall_s": null
+    }
+  }
+}

@@ -1,0 +1,285 @@
+{
+  "schema": 2,
+  "runs_file": "../eval/runs/juju-cli-cross-delta.jsonl",
+  "condition": {
+    "model": null,
+    "loaded_skills": [
+      "charmed-mysql-fault-injection",
+      "charmed-mysql-juju-inspect",
+      "charmed-mysql-log-autopsy",
+      "charmed-mysql-nightly-triage",
+      "juju-cli"
+    ],
+    "queries_file": "../eval/juju-cli-cross-delta.json",
+    "max_tool_calls": 12,
+    "num_runs": ":auto:",
+    "retries": 1,
+    "ts": "2026-09-28 20:14:45"
+  },
+  "intended_skills": [
+    "charmed-mysql-juju-inspect",
+    "juju-cli",
+    "charmed-mysql-fault-injection"
+  ],
+  "n_queries": 5,
+  "n_runs": 5,
+  "skill_rows": [
+    {
+      "skill": "charmed-mysql-fault-injection",
+      "view": "expected",
+      "runs": 2,
+      "hits": 2,
+      "rate": 1.0,
+      "decision": "PASS"
+    },
+    {
+      "skill": "charmed-mysql-fault-injection",
+      "view": "cross-trigger",
+      "runs": 3,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-juju-inspect",
+      "view": "expected",
+      "runs": 3,
+      "hits": 3,
+      "rate": 1.0,
+      "decision": "PASS"
+    },
+    {
+      "skill": "charmed-mysql-juju-inspect",
+      "view": "cross-trigger",
+      "runs": 2,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-log-autopsy",
+      "view": "cross-trigger",
+      "runs": 5,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-nightly-triage",
+      "view": "cross-trigger",
+      "runs": 5,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "juju-cli",
+      "view": "expected",
+      "runs": 5,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": "FAIL"
+    },
+    {
+      "skill": "juju-cli",
+      "view": "cross-trigger",
+      "runs": 0,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "(should-not queries)",
+      "view": "should-not",
+      "runs": 0,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": "PASS"
+    }
+  ],
+  "class_summaries": [
+    {
+      "query_class": "should-trigger",
+      "passed": 5,
+      "total": 5,
+      "pass_rate": 1.0,
+      "runs_taken": {
+        "min": 1,
+        "median": 1.0,
+        "max": 1
+      }
+    },
+    {
+      "query_class": "should-not",
+      "passed": 0,
+      "total": 0,
+      "pass_rate": 0.0,
+      "runs_taken": null
+    }
+  ],
+  "queries": [
+    {
+      "index": 0,
+      "query": "I need to know which unit is currently primary in our mysql-k8s cluster and whether both secondaries are online, straight from the cluster, not just juju status.",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect",
+        "juju-cli"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": true,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 1,
+      "query": "Get me the cluster status from the live deployment: member states, roles, and whether there is quorum.",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect",
+        "juju-cli"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": true,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 2,
+      "query": "Run a diagnosis on the juju model: why is the mysqld_exporter service inactive in our mysql-k8s pods and is that expected?",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect",
+        "juju-cli"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": true,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 3,
+      "query": "We need to test the charm's self-healing: kill one of the mysqld processes in a way that the cluster has to fail over, then observe.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection",
+        "juju-cli"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": true,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 4,
+      "query": "How do we inject a durable mysqld death on k8s without the StatefulSet undoing it? Then observe what the charm does.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection",
+        "juju-cli"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": true,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    }
+  ],
+  "effort": {
+    "total_tokens": 2648.0,
+    "output_tokens": 77.0,
+    "cost": 0.0,
+    "tool_calls": 1.0,
+    "wall_s": 2.0
+  },
+  "effort_by_class": {
+    "should-trigger": {
+      "total_tokens": 2648.0,
+      "output_tokens": 77.0,
+      "cost": 0.0,
+      "tool_calls": 1.0,
+      "wall_s": 2.0
+    },
+    "should-not": {
+      "total_tokens": null,
+      "output_tokens": null,
+      "cost": null,
+      "tool_calls": null,
+      "wall_s": null
+    }
+  }
+}

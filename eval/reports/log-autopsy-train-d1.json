@@ -1,0 +1,488 @@
+{
+  "schema": 2,
+  "runs_file": "../eval/runs/log-autopsy-train-d1.jsonl",
+  "condition": {
+    "model": null,
+    "loaded_skills": [
+      "charmed-mysql-fault-injection",
+      "charmed-mysql-juju-inspect",
+      "charmed-mysql-log-autopsy",
+      "charmed-mysql-nightly-triage",
+      "juju-cli"
+    ],
+    "queries_file": "../eval/charmed-mysql-log-autopsy-train.json",
+    "max_tool_calls": 12,
+    "num_runs": ":auto:",
+    "retries": 1,
+    "ts": "2026-09-28 23:58:22"
+  },
+  "intended_skills": [
+    "charmed-mysql-log-autopsy",
+    "charmed-mysql-nightly-triage"
+  ],
+  "n_queries": 12,
+  "n_runs": 14,
+  "skill_rows": [
+    {
+      "skill": "charmed-mysql-fault-injection",
+      "view": "cross-trigger",
+      "runs": 14,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-juju-inspect",
+      "view": "cross-trigger",
+      "runs": 14,
+      "hits": 1,
+      "rate": 0.071,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-log-autopsy",
+      "view": "expected",
+      "runs": 14,
+      "hits": 12,
+      "rate": 0.857,
+      "decision": "PASS"
+    },
+    {
+      "skill": "charmed-mysql-log-autopsy",
+      "view": "cross-trigger",
+      "runs": 0,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-nightly-triage",
+      "view": "expected",
+      "runs": 2,
+      "hits": 1,
+      "rate": 0.5,
+      "decision": "PASS"
+    },
+    {
+      "skill": "charmed-mysql-nightly-triage",
+      "view": "cross-trigger",
+      "runs": 12,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "juju-cli",
+      "view": "cross-trigger",
+      "runs": 14,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "(should-not queries)",
+      "view": "should-not",
+      "runs": 0,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": "PASS"
+    }
+  ],
+  "class_summaries": [
+    {
+      "query_class": "should-trigger",
+      "passed": 12,
+      "total": 12,
+      "pass_rate": 1.0,
+      "runs_taken": {
+        "min": 1,
+        "median": 1.0,
+        "max": 3
+      }
+    },
+    {
+      "query_class": "should-not",
+      "passed": 0,
+      "total": 0,
+      "pass_rate": 0.0,
+      "runs_taken": null
+    }
+  ],
+  "queries": [
+    {
+      "index": 0,
+      "query": "Our QA team sent me a juju-crashdump from a failed charm QA run of mysql-k8s. The requirer app has been waiting forever with 'Incorrect/incomplete data found in relation relational-db' while the provider shows active. What happened here?",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 1,
+      "query": "i got these logs from a customer deployment, the mysql-k8s unit crashed with KeyError 'logs_synced' during scale down, take a look and tell me whats going on",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 2,
+      "query": "Please analyze the debug-log.txt and db-dump.yaml attached to this issue (canonical/mysql-operators#327). The provider unit went back to active 40 seconds after being blocked. I need a root cause analysis.",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 3,
+      "query": "Test Observer execution 659755 failed with JujuWaitTimeoutError. The target app is blocked with 'Ready to create replication'. Can you look at the bundle and figure out if this is a charm bug?",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy",
+        "charmed-mysql-nightly-triage"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": true,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 4,
+      "query": "I pasted the traceback below from our Charmed MySQL unit. It says 'Uncaught exception while in charm code' with a KeyError at relations/mysql_provider.py. Help me understand what the traceback means and where it comes from.\nTraceback: KeyError: 'cluster-name' at mysql_provider.py line 270",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 5,
+      "query": "we're seeing the unit agent flip between idle and executing every couple minutes on our mysql-k8s deployment and CI waits keep timing out. here's an excerpt of juju debug-log showing 'Emitting Juju event rotate_mysql_logs' lines every minute. why does the unit never settle idle?",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "misroute",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": true,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        },
+        {
+          "run": 1,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        },
+        {
+          "run": 2,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 6,
+      "query": "A colleague shared a status-log yaml from a crashed controller dump. Our app status said 'Setting up replication' for 15 minutes while the unit said active Primary. Which one is lying and why?",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 7,
+      "query": "An AI-triaged issue claims a regression in mysql-router-k8s rev 902, but I'm skeptical. Using the git history and the revision tags, can you check whether rev 871 through 902 actually changed the relation code?",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 8,
+      "query": "hi, trying to make sense of a weird one: mysql-k8s rev 408, database-relation-changed failed once with error 1396 on retry and now the related app never gets credentials. no live access, all i have is the log bundle. what's the mechanism?",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 9,
+      "query": "For our incident review I need to understand this failure from the artifacts only (no cluster access): the mysql-k8s provider databag in db-dump.yaml has a diff snapshot and a user secret but no endpoints, and the requirer is stuck waiting. Reconstruct what happened.",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 10,
+      "query": "Tell me why this Python traceback from our charm unit proves the peer relation was already gone: KeyError raised with no ops/model.py frames below the charm frame.",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 11,
+      "query": "The nightly CI failure shows 'hook failed: \"logging-relation-broken\"' retried 8 times with the identical traceback. Given the juju log excerpt I attached, is this deterministic or a flake?",
+      "expected_skills": [
+        "charmed-mysql-log-autopsy",
+        "charmed-mysql-nightly-triage"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": true,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    }
+  ],
+  "effort": {
+    "total_tokens": 2773.5,
+    "output_tokens": 133.5,
+    "cost": 0.0,
+    "tool_calls": 1.0,
+    "wall_s": 14.5
+  },
+  "effort_by_class": {
+    "should-trigger": {
+      "total_tokens": 2773.5,
+      "output_tokens": 133.5,
+      "cost": 0.0,
+      "tool_calls": 1.0,
+      "wall_s": 14.5
+    },
+    "should-not": {
+      "total_tokens": null,
+      "output_tokens": null,
+      "cost": null,
+      "tool_calls": null,
+      "wall_s": null
+    }
+  }
+}

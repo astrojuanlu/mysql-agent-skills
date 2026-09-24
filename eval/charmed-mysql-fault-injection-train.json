@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "queries": [
+    {
+      "query": "I need to reproduce issue #415 where CI times out waiting for units to go idle. Can you set up an experiment on the testing model that shows the uniter queue saturation?",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "Simulate a quorum loss on our mysql-k8s cluster so we can verify the recovery runbook actually works.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "We need to test the charm's self-healing: kill one of the mysqld processes in a way that the cluster has to fail over, then observe.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection",
+        "juju-cli"
+      ]
+    },
+    {
+      "query": "Help me write a test that reliably puts the cluster in NO_QUORUM state before running promote-to-primary force. The kubectl delete pod approach keeps healing itself.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "Reproduce the DNS race from issue #327 deterministically: the relation setup should fail like the original bug but reliably.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "I want to verify our error-path logging change fires when the charm can't reach mysqld. How do we force that failure on the live model?",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "Set up a chaos experiment: take two of three units' mysqld down abruptly and check that promote-to-primary force=true succeeds.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "Design an experiment for the testing model where the cluster is in stable no_quorum, then walk through the manual recovery.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "We're testing a charm fix for the poisoned-retry bug. Build a repro on the live deployment where a relation setup fails mid-way exactly like issue #327.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "How do we inject a durable mysqld death on k8s without the StatefulSet undoing it? Then observe what the charm does.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection",
+        "juju-cli"
+      ]
+    },
+    {
+      "query": "For our game day we need to break the mysql cluster on purpose: first a single member, then a majority. Plan the kill sequence.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "Verify that the charm's manual rejoin path works: make a member get expelled from the group and watch it rejoin.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    }
+  ]
+}

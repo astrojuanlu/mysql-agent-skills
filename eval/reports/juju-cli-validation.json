@@ -1,0 +1,313 @@
+{
+  "schema": 2,
+  "runs_file": "../eval/runs/juju-cli-validation.jsonl",
+  "condition": {
+    "model": null,
+    "loaded_skills": [
+      "charmed-mysql-fault-injection",
+      "charmed-mysql-juju-inspect",
+      "charmed-mysql-log-autopsy",
+      "charmed-mysql-nightly-triage",
+      "juju-cli"
+    ],
+    "queries_file": "../eval/juju-cli-validation.json",
+    "max_tool_calls": 12,
+    "num_runs": ":auto:",
+    "retries": 1,
+    "ts": "2026-09-28 23:53:29"
+  },
+  "intended_skills": [
+    "juju-cli",
+    "charmed-mysql-juju-inspect"
+  ],
+  "n_queries": 6,
+  "n_runs": 7,
+  "skill_rows": [
+    {
+      "skill": "charmed-mysql-fault-injection",
+      "view": "cross-trigger",
+      "runs": 7,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-juju-inspect",
+      "view": "expected",
+      "runs": 1,
+      "hits": 1,
+      "rate": 1.0,
+      "decision": "PASS"
+    },
+    {
+      "skill": "charmed-mysql-juju-inspect",
+      "view": "cross-trigger",
+      "runs": 6,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-log-autopsy",
+      "view": "cross-trigger",
+      "runs": 7,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-nightly-triage",
+      "view": "cross-trigger",
+      "runs": 7,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "juju-cli",
+      "view": "expected",
+      "runs": 4,
+      "hits": 4,
+      "rate": 1.0,
+      "decision": "PASS"
+    },
+    {
+      "skill": "juju-cli",
+      "view": "cross-trigger",
+      "runs": 3,
+      "hits": 2,
+      "rate": 0.667,
+      "decision": null
+    },
+    {
+      "skill": "(should-not queries)",
+      "view": "should-not",
+      "runs": 2,
+      "hits": 2,
+      "rate": 1.0,
+      "decision": "FAIL"
+    }
+  ],
+  "class_summaries": [
+    {
+      "query_class": "should-trigger",
+      "passed": 5,
+      "total": 5,
+      "pass_rate": 1.0,
+      "runs_taken": {
+        "min": 1,
+        "median": 1.0,
+        "max": 1
+      }
+    },
+    {
+      "query_class": "should-not",
+      "passed": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "runs_taken": {
+        "min": 2,
+        "median": 2.0,
+        "max": 2
+      }
+    }
+  ],
+  "queries": [
+    {
+      "index": 0,
+      "query": "`juju exec --unit mysql-k8s/0 -- mysqld --version` returns command not found. Which container is mysqld actually running in, and what's the right invocation on a k8s charm?",
+      "expected_skills": [
+        "juju-cli"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": true
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 1,
+      "query": "We're about to delete a juju model that has two apps with storage attached. Walk me through destroying it for real and verifying nothing else was touched.",
+      "expected_skills": [
+        "juju-cli"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": true
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 2,
+      "query": "The charm action add-relation-to-unit keeps timing out on the client even though it clearly applies on the unit. How are long-running charm actions supposed to be invoked?",
+      "expected_skills": [
+        "juju-cli"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": true
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 3,
+      "query": "Right after a fresh deploy, `juju ssh mysql-k8s/0` gets a permission error while the same command works on mysql-k8s/1 and /2. What's going on?",
+      "expected_skills": [
+        "juju-cli"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": true
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 4,
+      "query": "Plan the upgrade sequence for mysql-k8s from 8.0 to 8.4 across our three units, including backup and verification steps.",
+      "expected_skills": [],
+      "query_class": "should-not",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "misroute",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": true
+          }
+        },
+        {
+          "run": 1,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "misroute",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": true
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 5,
+      "query": "Our app's relation data shows empty 'endpoints' and the application has been waiting for ages. Debug the relation between the app and mysql-k8s.",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": true,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    }
+  ],
+  "effort": {
+    "total_tokens": 2709.0,
+    "output_tokens": 87.0,
+    "cost": 0.0,
+    "tool_calls": 1.0,
+    "wall_s": 8.0
+  },
+  "effort_by_class": {
+    "should-trigger": {
+      "total_tokens": 2685.5,
+      "output_tokens": 67.0,
+      "cost": 0.0,
+      "tool_calls": 1.0,
+      "wall_s": 3.5
+    },
+    "should-not": {
+      "total_tokens": 2853.0,
+      "output_tokens": 235.0,
+      "cost": 0.0,
+      "tool_calls": 1.0,
+      "wall_s": 10.0
+    }
+  }
+}

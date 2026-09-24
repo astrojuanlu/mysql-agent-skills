@@ -1,0 +1,24 @@
+env_list = ["3.14", "lint"]
+
+[env_run_base]
+description = "run the test suite with pytest"
+runner = "uv-venv-lock-runner"
+dependency_groups = ["dev"]
+commands = [["pytest", { replace = "posargs", extend = true }]]
+
+[env.lint]
+description = "run linters"
+basepython = "3.14"
+skip_install = true
+commands = [
+    ["ruff", "check", { replace = "posargs", default = ["."], extend = true }],
+    ["ruff", "format", "--check", "--diff", { replace = "posargs", default = ["."], extend = true }],
+]
+
+[env.format]
+description = "run formatters"
+basepython = "3.14"
+skip_install = true
+commands = [
+    ["ruff", "format", { replace = "posargs", default = ["."], extend = true }],
+]

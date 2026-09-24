@@ -1,0 +1,343 @@
+{
+  "schema": 2,
+  "runs_file": "../eval/runs/fault-injection-validation.jsonl",
+  "condition": {
+    "model": null,
+    "loaded_skills": [
+      "charmed-mysql-fault-injection",
+      "charmed-mysql-juju-inspect",
+      "charmed-mysql-log-autopsy",
+      "charmed-mysql-nightly-triage",
+      "juju-cli"
+    ],
+    "queries_file": "../eval/charmed-mysql-fault-injection-validation.json",
+    "max_tool_calls": 12,
+    "num_runs": ":auto:",
+    "retries": 1,
+    "ts": "2026-09-28 19:55:15"
+  },
+  "intended_skills": [
+    "charmed-mysql-fault-injection"
+  ],
+  "n_queries": 8,
+  "n_runs": 8,
+  "skill_rows": [
+    {
+      "skill": "charmed-mysql-fault-injection",
+      "view": "expected",
+      "runs": 8,
+      "hits": 8,
+      "rate": 1.0,
+      "decision": "PASS"
+    },
+    {
+      "skill": "charmed-mysql-fault-injection",
+      "view": "cross-trigger",
+      "runs": 0,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-juju-inspect",
+      "view": "cross-trigger",
+      "runs": 8,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-log-autopsy",
+      "view": "cross-trigger",
+      "runs": 8,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-nightly-triage",
+      "view": "cross-trigger",
+      "runs": 8,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "juju-cli",
+      "view": "cross-trigger",
+      "runs": 8,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "(should-not queries)",
+      "view": "should-not",
+      "runs": 0,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": "PASS"
+    }
+  ],
+  "class_summaries": [
+    {
+      "query_class": "should-trigger",
+      "passed": 8,
+      "total": 8,
+      "pass_rate": 1.0,
+      "runs_taken": {
+        "min": 1,
+        "median": 1.0,
+        "max": 1
+      }
+    },
+    {
+      "query_class": "should-not",
+      "passed": 0,
+      "total": 0,
+      "pass_rate": 0.0,
+      "runs_taken": null
+    }
+  ],
+  "queries": [
+    {
+      "index": 0,
+      "query": "Break the database on purpose: we want the app to see a connection failure for about two minutes, then automatic recovery, to test our app's retry logic.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": true,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 1,
+      "query": "Can you make the mysql-k8s cluster lose its primary and see how long failover takes on this rig? Then write up the timings.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": true,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 2,
+      "query": "Plan and run an experiment where a relation setup is interrupted after the MySQL user is created but before credentials are published, mimicking issue #327.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": true,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 3,
+      "query": "We need a reproducible NO_QUORUM for the game day runbook rehearsal next week. Prepare the exact commands on a scratch model.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": true,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 4,
+      "query": "Test what happens to continuous writes when mysqld dies ungracefully on one unit. Set it up and monitor the writes.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": true,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 5,
+      "query": "Inject a fault: block the charm from reaching mysqld's admin port for a while and confirm the charm logs the failure we just added.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": true,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 6,
+      "query": "Rehearse the quorum-loss recovery procedure from the docs on the testing model, including the force-quorum action.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": true,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 7,
+      "query": "our sre team wants a chaos test plan for charmed mysql: member crashes, quorum loss, and recovery, in that order, on the staging model.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": true,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    }
+  ],
+  "effort": {
+    "total_tokens": 2677.0,
+    "output_tokens": 106.0,
+    "cost": 0.0,
+    "tool_calls": 1.0,
+    "wall_s": 3.0
+  },
+  "effort_by_class": {
+    "should-trigger": {
+      "total_tokens": 2677.0,
+      "output_tokens": 106.0,
+      "cost": 0.0,
+      "tool_calls": 1.0,
+      "wall_s": 3.0
+    },
+    "should-not": {
+      "total_tokens": null,
+      "output_tokens": null,
+      "cost": null,
+      "tool_calls": null,
+      "wall_s": null
+    }
+  }
+}

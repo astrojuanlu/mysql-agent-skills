@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "queries": [
+    {
+      "query": "juju deploy mysql-k8s finished but all units show agent-status '403 Forbidden' right after deploy. What's wrong and how do I fix it?",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "`juju run mysql-k8s/0 get-cluster-status` hangs for minutes and then the client gives up, but I think the action actually ran. What's the right way to invoke charm actions and wait for them?",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "How do I exec a shell command inside the mysqld container of unit mysql-k8s/2 on a k8s deployment? Plain `juju ssh mysql-k8s/2` drops me in the wrong place.",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "Our staging juju model is beyond saving. Give me the exact commands to destroy the model and its storage for real.",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "mysqld died with exit 137 after I ran `pkill -9 mysqld` inside the unit container. Did I do something wrong?",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "Which controller and model are my juju commands actually pointed at right now? I have three controllers configured and I'm getting confused about what I'm inspecting.",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "An automation session left a `juju status` sampling loop running every 5 seconds in the background. Find it and shut it down.",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "I deployed mysql-k8s without --trust and now the charm can't talk to kubernetes. What does trust do and how do I grant it after the fact?",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "Write a Python script that scrapes juju debug-log output for ERROR lines and posts them to Slack.",
+      "expected_skills": []
+    },
+    {
+      "query": "Why does juju status show my mysql-k8s unit as blocked? The cluster might have lost quorum — check the deployment and tell me.",
+      "expected_skills": ["charmed-mysql-juju-inspect"]
+    }
+  ]
+}

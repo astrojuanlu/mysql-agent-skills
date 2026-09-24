@@ -1,0 +1,387 @@
+{
+  "schema": 2,
+  "runs_file": "../eval/runs/near-misses.jsonl",
+  "condition": {
+    "model": null,
+    "loaded_skills": [
+      "charmed-mysql-fault-injection",
+      "charmed-mysql-juju-inspect",
+      "charmed-mysql-log-autopsy",
+      "charmed-mysql-nightly-triage",
+      "juju-cli"
+    ],
+    "queries_file": "../eval/near-misses.json",
+    "max_tool_calls": 12,
+    "num_runs": ":auto:",
+    "retries": 1,
+    "ts": "2026-09-28 23:52:37"
+  },
+  "intended_skills": [
+    "charmed-mysql-juju-inspect",
+    "charmed-mysql-nightly-triage"
+  ],
+  "n_queries": 8,
+  "n_runs": 11,
+  "skill_rows": [
+    {
+      "skill": "charmed-mysql-fault-injection",
+      "view": "cross-trigger",
+      "runs": 11,
+      "hits": 1,
+      "rate": 0.091,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-juju-inspect",
+      "view": "expected",
+      "runs": 3,
+      "hits": 3,
+      "rate": 1.0,
+      "decision": "PASS"
+    },
+    {
+      "skill": "charmed-mysql-juju-inspect",
+      "view": "cross-trigger",
+      "runs": 8,
+      "hits": 1,
+      "rate": 0.125,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-log-autopsy",
+      "view": "cross-trigger",
+      "runs": 11,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-nightly-triage",
+      "view": "expected",
+      "runs": 2,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": "FAIL"
+    },
+    {
+      "skill": "charmed-mysql-nightly-triage",
+      "view": "cross-trigger",
+      "runs": 9,
+      "hits": 2,
+      "rate": 0.222,
+      "decision": null
+    },
+    {
+      "skill": "juju-cli",
+      "view": "cross-trigger",
+      "runs": 11,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "(should-not queries)",
+      "view": "should-not",
+      "runs": 6,
+      "hits": 4,
+      "rate": 0.667,
+      "decision": "FAIL"
+    }
+  ],
+  "class_summaries": [
+    {
+      "query_class": "should-trigger",
+      "passed": 3,
+      "total": 4,
+      "pass_rate": 0.75,
+      "runs_taken": {
+        "min": 1,
+        "median": 1.0,
+        "max": 2
+      }
+    },
+    {
+      "query_class": "should-not",
+      "passed": 4,
+      "total": 4,
+      "pass_rate": 1.0,
+      "runs_taken": {
+        "min": 1,
+        "median": 1.5,
+        "max": 2
+      }
+    }
+  ],
+  "queries": [
+    {
+      "index": 0,
+      "query": "Our nightly backup job failed last night with a timeout. Can you restore from the previous backup?",
+      "expected_skills": [],
+      "query_class": "should-not",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "miss",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 1,
+      "query": "Write a Python script that parses MySQL slow query logs and extracts the top 10 queries by time.",
+      "expected_skills": [],
+      "query_class": "should-not",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "miss",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 2,
+      "query": "Explain what Test Observer is and how artefacts and executions relate to GitHub PRs and nightly runs.",
+      "expected_skills": [],
+      "query_class": "should-not",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "misroute",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": true,
+            "juju-cli": false
+          }
+        },
+        {
+          "run": 1,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "misroute",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": true,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 3,
+      "query": "The cluster lost quorum last night and recovered on its own. In the retro, explain what probably happened and what we should improve in our runbooks.",
+      "expected_skills": [],
+      "query_class": "should-not",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "misroute",
+          "triggered": {
+            "charmed-mysql-fault-injection": true,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        },
+        {
+          "run": 1,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "misroute",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": true,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 4,
+      "query": "juju status shows mysql-k8s/1 as blocked — will that affect tonight's backup window? Just check the deployment is otherwise fine.",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": true,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 5,
+      "query": "Our grafana dashboard shows no mysql metrics since this morning. The grafana-agent relation to mysql-k8s might be broken — can you check the deployment?",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": true,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 6,
+      "query": "juju status has shown 'agent: lost' on mysql-k8s/0 for an hour. Diagnose the live deployment and tell me what's wrong.",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": true,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 7,
+      "query": "It's 9am and the nightly CI report just landed: everything passed. Draft a two-line standup note saying the nightly tests are green.",
+      "expected_skills": [
+        "charmed-mysql-nightly-triage"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "miss",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        },
+        {
+          "run": 1,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "miss",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "FAIL",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    }
+  ],
+  "effort": {
+    "total_tokens": 2721.0,
+    "output_tokens": 105.0,
+    "cost": 0.0,
+    "tool_calls": 1.0,
+    "wall_s": 9.0
+  },
+  "effort_by_class": {
+    "should-trigger": {
+      "total_tokens": 2718.0,
+      "output_tokens": 104.0,
+      "cost": 0.0,
+      "tool_calls": 0.0,
+      "wall_s": 7.0
+    },
+    "should-not": {
+      "total_tokens": 2795.0,
+      "output_tokens": 177.5,
+      "cost": 0.0,
+      "tool_calls": 1.0,
+      "wall_s": 10.0
+    }
+  }
+}
