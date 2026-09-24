@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "queries": [
+    {
+      "query": "Can you give me the status of the latest charmed-mysql nightlies? Just the failures with a one-line cause each.",
+      "expected_skills": [
+        "charmed-mysql-nightly-triage"
+      ]
+    },
+    {
+      "query": "test_scale_in_and_scale_out_charm failed on execution 443474 again. Fetch the results, compare with previous_results on the artefact, and tell me if it's a regression or a chronic issue.",
+      "expected_skills": [
+        "charmed-mysql-nightly-triage"
+      ]
+    },
+    {
+      "query": "We got paged about red CI on canonical/mysql-operators. Which failures from the nightly need a human today and which can wait?",
+      "expected_skills": [
+        "charmed-mysql-nightly-triage"
+      ]
+    },
+    {
+      "query": "Build me a small triage digest: for TO execution 494482 get the failure message from execution_metadata, the ci_link, and the logs bundle location.",
+      "expected_skills": [
+        "charmed-mysql-nightly-triage"
+      ]
+    },
+    {
+      "query": "Every PR from the QA team this week had failing charm QA. Check whether the failures cluster on specific plans or architectures.",
+      "expected_skills": [
+        "charmed-mysql-nightly-triage"
+      ]
+    },
+    {
+      "query": "For the release review I need: count of nightly failures per test over the past two weeks, classified as deterministic/flaky/infra.",
+      "expected_skills": [
+        "charmed-mysql-nightly-triage"
+      ]
+    },
+    {
+      "query": "charm QA execution 761768 timed out in test_deploy with agents never idle. Is this the known agent-busyness issue or something new? Check the execution and prior results.",
+      "expected_skills": [
+        "charmed-mysql-nightly-triage"
+      ]
+    },
+    {
+      "query": "Summarize this failed PR run for the standup: which jobs failed, why, and is the change itself sound?",
+      "expected_skills": [
+        "charmed-mysql-nightly-triage"
+      ]
+    }
+  ]
+}

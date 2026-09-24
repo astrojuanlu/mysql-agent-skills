@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "queries": [
+    {
+      "query": "`juju exec --unit mysql-k8s/0 -- mysqld --version` returns command not found. Which container is mysqld actually running in, and what's the right invocation on a k8s charm?",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "We're about to delete a juju model that has two apps with storage attached. Walk me through destroying it for real and verifying nothing else was touched.",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "The charm action add-relation-to-unit keeps timing out on the client even though it clearly applies on the unit. How are long-running charm actions supposed to be invoked?",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "Right after a fresh deploy, `juju ssh mysql-k8s/0` gets a permission error while the same command works on mysql-k8s/1 and /2. What's going on?",
+      "expected_skills": ["juju-cli"]
+    },
+    {
+      "query": "Plan the upgrade sequence for mysql-k8s from 8.0 to 8.4 across our three units, including backup and verification steps.",
+      "expected_skills": []
+    },
+    {
+      "query": "Our app's relation data shows empty 'endpoints' and the application has been waiting for ages. Debug the relation between the app and mysql-k8s.",
+      "expected_skills": ["charmed-mysql-juju-inspect"]
+    }
+  ]
+}

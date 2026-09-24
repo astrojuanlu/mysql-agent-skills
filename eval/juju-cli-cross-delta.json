@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "queries": [
+    {
+      "query": "I need to know which unit is currently primary in our mysql-k8s cluster and whether both secondaries are online, straight from the cluster, not just juju status.",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect",
+        "juju-cli"
+      ]
+    },
+    {
+      "query": "Get me the cluster status from the live deployment: member states, roles, and whether there is quorum.",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect",
+        "juju-cli"
+      ]
+    },
+    {
+      "query": "Run a diagnosis on the juju model: why is the mysqld_exporter service inactive in our mysql-k8s pods and is that expected?",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect",
+        "juju-cli"
+      ]
+    },
+    {
+      "query": "We need to test the charm's self-healing: kill one of the mysqld processes in a way that the cluster has to fail over, then observe.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection",
+        "juju-cli"
+      ]
+    },
+    {
+      "query": "How do we inject a durable mysqld death on k8s without the StatefulSet undoing it? Then observe what the charm does.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection",
+        "juju-cli"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,183 @@
+{
+  "schema": 2,
+  "runs_file": "../eval/runs/smoke-schema2.jsonl",
+  "condition": {
+    "model": null,
+    "loaded_skills": [
+      "charmed-mysql-fault-injection",
+      "charmed-mysql-juju-inspect",
+      "charmed-mysql-log-autopsy",
+      "charmed-mysql-nightly-triage",
+      "juju-cli"
+    ],
+    "queries_file": "../eval/smoke.json",
+    "max_tool_calls": 12,
+    "num_runs": ":auto:",
+    "retries": 1,
+    "ts": "2026-09-29 08:40:59"
+  },
+  "intended_skills": [
+    "charmed-mysql-juju-inspect"
+  ],
+  "n_queries": 2,
+  "n_runs": 2,
+  "skill_rows": [
+    {
+      "skill": "charmed-mysql-fault-injection",
+      "view": "cross-trigger",
+      "runs": 2,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-juju-inspect",
+      "view": "expected",
+      "runs": 1,
+      "hits": 1,
+      "rate": 1.0,
+      "decision": "PASS"
+    },
+    {
+      "skill": "charmed-mysql-juju-inspect",
+      "view": "cross-trigger",
+      "runs": 1,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-log-autopsy",
+      "view": "cross-trigger",
+      "runs": 2,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "charmed-mysql-nightly-triage",
+      "view": "cross-trigger",
+      "runs": 2,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "juju-cli",
+      "view": "cross-trigger",
+      "runs": 2,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": null
+    },
+    {
+      "skill": "(should-not queries)",
+      "view": "should-not",
+      "runs": 1,
+      "hits": 0,
+      "rate": 0.0,
+      "decision": "PASS"
+    }
+  ],
+  "class_summaries": [
+    {
+      "query_class": "should-trigger",
+      "passed": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "runs_taken": {
+        "min": 1,
+        "median": 1.0,
+        "max": 1
+      }
+    },
+    {
+      "query_class": "should-not",
+      "passed": 1,
+      "total": 1,
+      "pass_rate": 1.0,
+      "runs_taken": {
+        "min": 1,
+        "median": 1.0,
+        "max": 1
+      }
+    }
+  ],
+  "queries": [
+    {
+      "index": 0,
+      "query": "Our mysql-k8s unit mysql-k8s/1 is stuck in blocked status and I don't know why it's blocked. Help me figure out what's wrong with it.",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect"
+      ],
+      "query_class": "should-trigger",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "hit",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": true,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    },
+    {
+      "index": 1,
+      "query": "Optimize this MySQL query: SELECT * FROM orders WHERE created_at > NOW() - INTERVAL 30 DAY; it's slow and I need it faster.",
+      "expected_skills": [],
+      "query_class": "should-not",
+      "runs": [
+        {
+          "run": 0,
+          "attempt": 0,
+          "clean": true,
+          "verdict": "miss",
+          "triggered": {
+            "charmed-mysql-fault-injection": false,
+            "charmed-mysql-juju-inspect": false,
+            "charmed-mysql-log-autopsy": false,
+            "charmed-mysql-nightly-triage": false,
+            "juju-cli": false
+          }
+        }
+      ],
+      "decision": "PASS",
+      "timeouts": 0,
+      "errors": 0,
+      "retries_used": 0
+    }
+  ],
+  "effort": {
+    "total_tokens": 3079.0,
+    "output_tokens": 461.0,
+    "cost": 0.0006,
+    "tool_calls": 0.5,
+    "wall_s": 9.0
+  },
+  "effort_by_class": {
+    "should-trigger": {
+      "total_tokens": 2707.0,
+      "output_tokens": 82.0,
+      "cost": 0.0004,
+      "tool_calls": 1.0,
+      "wall_s": 2.0
+    },
+    "should-not": {
+      "total_tokens": 3451.0,
+      "output_tokens": 840.0,
+      "cost": 0.0008,
+      "tool_calls": 0.0,
+      "wall_s": 16.0
+    }
+  }
+}

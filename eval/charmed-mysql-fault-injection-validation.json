@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "queries": [
+    {
+      "query": "Break the database on purpose: we want the app to see a connection failure for about two minutes, then automatic recovery, to test our app's retry logic.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "Can you make the mysql-k8s cluster lose its primary and see how long failover takes on this rig? Then write up the timings.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "Plan and run an experiment where a relation setup is interrupted after the MySQL user is created but before credentials are published, mimicking issue #327.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "We need a reproducible NO_QUORUM for the game day runbook rehearsal next week. Prepare the exact commands on a scratch model.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "Test what happens to continuous writes when mysqld dies ungracefully on one unit. Set it up and monitor the writes.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "Inject a fault: block the charm from reaching mysqld's admin port for a while and confirm the charm logs the failure we just added.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "Rehearse the quorum-loss recovery procedure from the docs on the testing model, including the force-quorum action.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    },
+    {
+      "query": "our sre team wants a chaos test plan for charmed mysql: member crashes, quorum loss, and recovery, in that order, on the staging model.",
+      "expected_skills": [
+        "charmed-mysql-fault-injection"
+      ]
+    }
+  ]
+}
