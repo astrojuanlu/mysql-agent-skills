@@ -1,0 +1,9 @@
+id: diagnose
+version: 1
+description: >
+  Rubric-free T4 mode: live, unsolved bugs with no known ground truth.
+  No mechanical checks — correctness is judged manually from the
+  transcripts (blinded), and retroactive rubrics can be derived once a
+  bug is solved. What remains mechanical: the verdict contract
+  (schema_ok) and all effort/condition metadata.
+checks: []

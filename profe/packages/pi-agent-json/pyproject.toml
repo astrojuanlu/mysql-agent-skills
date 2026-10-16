@@ -5,7 +5,7 @@ build-backend = "uv_build"
 [project]
 name = "pi-agent-json"
 version = "0.1.0"
-description = "Typed Pydantic models of pi --mode json event streams"
+description = "Typed Pydantic models of pi JSON streams (events and session files)"
 readme = "README.md"
 authors = [
     { name = "Juan Luis Cano Rodríguez", email = "juan.rodriguez@canonical.com" }

@@ -1,0 +1,43 @@
+id: la-327
+version: 1
+description: >
+  Ground truth: canonical/mysql-operators#327 (case study). The failure
+  is a charm bug: a CoreDNS race fails the first database-relation-changed
+  attempt (unretried get_k8s_fqdn), Juju's retry hits MySQL error 1396
+  because create_scoped_user is not idempotent, the retry hook exits 0
+  (committing the poisoned relation state), and update-status masks the
+  blocked status ~41s later. Not an infra failure: the DNS race is only
+  the trigger.
+checks:
+  - id: verdict-is-charm-bug
+    type: field_equals
+    field: verdict
+    value: charm-bug
+    description: the defect class is the charm's, not infrastructure's
+  - id: root-cause-names-1396
+    type: field_regex
+    field: root_cause
+    patterns: ["1396"]
+    description: the retry-hit-1396 chain is the crux
+  - id: root-cause-names-retry
+    type: field_regex
+    field: root_cause
+    patterns: ["retr(y|ies|ied)|race"]
+    description: the transient failure + retry chain, not a static error
+  - id: root-cause-names-user-creation
+    type: field_regex
+    field: root_cause
+    patterns:
+      - "create.?user|user creation|non-?idempotent|CREATE USER"
+    description: the non-idempotent user creation turns transient into permanent
+  - id: evidence-grounded
+    type: evidence_in_artifacts
+    field: evidence_quotes
+    min_quotes: 2
+    description: every quoted line appears verbatim in the artifacts
+  - id: component-identified
+    type: field_regex
+    field: affected_component
+    patterns:
+      - "mysql_provider|database-relation|provider"
+    description: the provider relation handler is where it breaks

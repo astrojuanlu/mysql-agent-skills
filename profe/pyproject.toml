@@ -14,6 +14,7 @@ requires-python = ">=3.14"
 dependencies = [
     "pi-agent-json",
     "pydantic>=2.13.5",
+    "pyyaml>=6.0.2",
 ]
 
 [project.scripts]
@@ -50,6 +51,9 @@ members = [
 pi-agent-json = { workspace = true }
 
 [dependency-groups]
+analysis = [
+    "scipy>=1.16",
+]
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.9",

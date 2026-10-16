@@ -1,6 +1,7 @@
 # Bundle anatomy — evidence sources and how to read them
 
-Reference for `charmed-mysql-log-autopsy` step 3. Covers the two common
+Reference for `charmed-mysql-juju-inspect` step 1, offline part (evidence
+mapping). Covers the two common
 capture formats: **Test Observer log bundles** (charm QA) and
 **juju-crashdumps** (`juju crashdump` / controller crashdumps attached to
 issues).
@@ -33,6 +34,16 @@ Caveats learned from real cases:
   CI bundles but may be absent from `juju debug-log` on some local rigs;
   `executing` transitions and `Emitting Juju event <name>.` lines are the
   reliable evidence there.
+
+## solutions.qa.canonical.com links
+
+Issues and triage reports often link run artefacts as
+`https://solutions.qa.canonical.com/testruns/<uuid>` (the Solutions QA
+frontend). That host requires login: plain `curl`/`wget` fails (redirect
+to a sign-in page), and reading that as "the artefact is missing" is a
+dead end. Fetch the artefacts with `weebl-tools` using an appropriate
+weebl token (internal Canonical tooling — see internal documentation for
+access), then apply the file map above to whatever bundle comes out.
 
 ## Grep cookbook
 

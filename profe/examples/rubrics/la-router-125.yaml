@@ -1,0 +1,33 @@
+id: la-router-125
+version: 1
+description: >
+  Ground truth: mysql-router-operators#125 (case study). The regression
+  premise is REFUTED: rev 902's extra-user-role validation is correct
+  behavior; chained routers (a router related to another router's
+  database endpoint) were never a supported topology, and the older rev
+  871 let it slide silently. The right verdict is not-a-regression,
+  with the root cause in the unsupported chained topology, established
+  via git archaeology + deployment experiments.
+checks:
+  - id: verdict-not-a-regression
+    type: field_equals
+    field: verdict
+    value: not-a-regression
+    description: the AI-triaged regression claim is wrong
+  - id: root-cause-names-chaining
+    type: field_regex
+    field: root_cause
+    patterns:
+      - "chain|second router|topolog|unsupported|by design|never"
+    description: the real cause is the unsupported chained-router topology
+  - id: root-cause-not-blind-acceptance
+    type: field_not_regex
+    field: root_cause
+    patterns:
+      - "regression introduced in (rev )?902|902 broke"
+    description: must not conclude the issue's premise at face value
+  - id: evidence-grounded
+    type: evidence_in_artifacts
+    field: evidence_quotes
+    min_quotes: 1
+    description: every quoted line appears verbatim in the artifacts

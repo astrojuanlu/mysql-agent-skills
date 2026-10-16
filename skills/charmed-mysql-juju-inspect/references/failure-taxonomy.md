@@ -1,7 +1,7 @@
 # Failure taxonomy — signature → likely cause → confirmation
 
 Quick-reference tables distilled from real Charmed MySQL debugging cases.
-Use in `charmed-mysql-log-autopsy` step 7 (and as a triage shortcut in
+Use in `charmed-mysql-juju-inspect` steps 4/8 (and as a triage shortcut in
 `charmed-mysql-nightly-triage`). Read the row, confirm with the listed
 evidence, then apply the corresponding forensics reference.
 
@@ -54,4 +54,4 @@ evidence, then apply the corresponding forensics reference.
 |---|---|---|
 | Snap service crash-looping after a snap refresh, `SnapError: ... Start request repeated too quickly` | systemd `StartLimitBurst` (5 crashes/10s) from a crash on startup; config baked with old `$SNAP_DATA` revision paths | `journalctl -u snap.charmed-mysql.*-service` ("Start request repeated too quickly", "Permission denied" writing old revision dir) |
 | `Access denied` for a user whose recipe worked before | Passwords rotate on every charm refresh/redeploy | Re-fetch via `get-password`; deployment freshness |
-| Charm behavior differs from current git source | Deployed revision ≠ checkout (branch divergence, renamed databag keys, fetched libs) | `git show origin/<branch>:<path>` for the deployed rev; `unzip -p <charm> <file>` |
+| Charm behavior differs from current git source | Deployed revision ≠ checkout (branch divergence, renamed databag keys, fetched libs) | shallow-clone the tag and `git show <tag>:<path>` (mysql-charms-source skill); `unzip -p <charm> <file>` only without GitHub access |

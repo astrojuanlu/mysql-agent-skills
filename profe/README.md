@@ -4,77 +4,31 @@
 
 Evaluate skills following a structured methodology.
 
-First, validate that the skills follow the [Agent Skills spec]
-and probe whether they are triggered by the prompts you expect
-(validate → probe → summarize).
-
-Next, grade the performance of an agent using the skills
-according to some rubrics, and compare the performance of different
-models (grade → compare → report).
+One lifecycle: `validate` → `compile` → `run` → `grade` → `report`.
+`validate` checks that the skills follow the [Agent Skills spec].
+`compile` turns trigger queries into tasks and rubrics (offline). `run`
+collects one attempt into a capture bundle — on the host or inside any
+sandbox boundary the caller provisions. `grade` scores that bundle
+mechanically, offline. `report` renders graded runs into the durable
+deliverable; given two runs files it becomes a paired comparison.
 
 [Agent Skills spec]: https://agentskills.io/specification
 
-## Reference
+## Usage
 
-### `profe validate`: structure check
+Two kinds of session, one lifecycle — every flag is in
+[Reference](#reference), the reasoning in [Explanation](#explanation).
+Worked format examples — a trigger-queries file, task definitions, and
+rubrics — live in [`examples/`](examples/); the artifact files the example
+tasks reference are deliberately not included.
 
-Thin wrapper over `skills-ref validate`: frontmatter, name/description
-limits, body budget. Validates *structure only* - it cannot assess
-trigger behavior (that's `probe`'s job) or answer quality (`grade`).
+### A typical trigger-cell session
 
-```
-profe validate --skills <path>...
-```
-
-### `profe probe`: execute trigger queries, record attempts
-
-Runs every query in the queries file serially against the loaded skills.
-Measures **triggering only**.
-
-```
-profe probe --skills <path>... [--queries eval/queries.json]
-            [--out eval/runs/<name>.jsonl]
-            [--model MODEL] [--timeout 300] [--retries 1]
-            [--max-tool-calls 12] [--num-runs :auto:|N]
-```
-
-- `--skills <path>...` loads skill directories or files (variadic); at
-  least one is required. Record names come from each skill's frontmatter;
-  an invalid path is a hard error, since a silently missing competitor
-  corrupts cross-trigger accounting. Loading everything is a shell glob
-  away: `--skills skills/*/`.
-- `--model` overrides pi's configured default model (e.g.
-  `--model z-ai/glm-5.3-flash`); the model is recorded in every record.
-- `--timeout` is a single global hang-guard, not a task-duration budget.
-
-### `profe summarize` - aggregate a probe runs file into a report
-
-Generate pass rates from trigger probes.
-The table format renders one row per skill and query class;
-the JSON format carries the same aggregates plus a **per-query section**
-(every query's per-run trigger state and decision)
-so a misroute or a near-miss that fired is diagnosable from the report alone,
-without re-reading the runs file.
-Both formats include effort medians.
-
-```
-profe summarize eval/runs/<name>.jsonl [--out eval/reports/<name>.json]
-                [--format table|json]
-```
-
-### `profe grade`: launch rubric tasks, score the attempts (**WIP**)
-
-### `profe compare`: rank performance of different models and skill configurations (**WIP**)
-
-### `profe report`: turn graded runs into a structured report (**WIP**)
-
-## How to run a typical session
-
-`queries.json` declares its format version and carries the query objects
-under `queries`. `expected_skills` names the skill(s) the query should
-trigger — always a **list**, any-of semantics; an **empty list** marks the
-near-misses every skill must stay away from (should-not). The schema
-declaration is mandatory.
+A **queries file** declares its format version and carries the query
+objects under `queries`. `expected_skills` names the skill(s) the query
+should trigger — always a **list**, any-of semantics; an **empty list**
+marks the near-misses every skill must stay away from (should-not). The
+schema declaration is mandatory.
 
 ```json
 {
@@ -85,70 +39,314 @@ declaration is mandatory.
     {"query": "Optimize this MySQL query: SELECT * FROM orders WHERE created_at > NOW() - INTERVAL 30 DAY; it's slow and I need it faster.",
      "expected_skills": []},
     {"query": "Test Observer execution 659755 failed on artefact 409577 — pull the artefact and tell me what happened.",
-     "expected_skills": ["charmed-mysql-log-autopsy", "charmed-mysql-nightly-triage"]}
+     "expected_skills": ["charmed-mysql-juju-inspect", "charmed-mysql-nightly-triage"]}
   ]
 }
 ```
 
-Running it produces one JSONL record per attempt:
-
-```json
-{"schema": 2, "index": 0, "run": 0, "attempt": 0, "expected_skills": ["charmed-mysql-juju-inspect"], "model": null, "loaded_skills": ["charmed-mysql-log-autopsy", "charmed-mysql-juju-inspect", "charmed-mysql-nightly-triage", "charmed-mysql-fault-injection", "juju-cli"], "triggered": {"charmed-mysql-log-autopsy": false, "charmed-mysql-juju-inspect": true, "charmed-mysql-nightly-triage": false, "charmed-mysql-fault-injection": false, "juju-cli": false}, "first_trigger_skill": "charmed-mysql-juju-inspect", "early_exit": "trigger", "trigger_call_index": 1, "stderr_tail": [], "clean": true, "usage": {"input": 43151, "output": 2224, "cost": {"input": 0.0192, "output": 0.0021, "cacheRead": 0.0, "cacheWrite": 0.0, "total": 0.0213}}, "dur_s": 24}
-{"schema": 2, "index": 1, "run": 0, "attempt": 0, "expected_skills": [], "model": null, "loaded_skills": ["charmed-mysql-log-autopsy", "charmed-mysql-juju-inspect", "charmed-mysql-nightly-triage", "charmed-mysql-fault-injection", "juju-cli"], "triggered": {"charmed-mysql-log-autopsy": false, "charmed-mysql-juju-inspect": false, "charmed-mysql-nightly-triage": false, "charmed-mysql-fault-injection": false, "juju-cli": false}, "first_trigger_skill": null, "early_exit": "max_tool_calls", "trigger_call_index": null, "stderr_tail": [], "clean": true, "usage": {"input": 38102, "output": 812, "cost": {"input": 0.0169, "output": 0.0008, "cacheRead": 0.0, "cacheWrite": 0.0, "total": 0.0177}}, "dur_s": 41}
-```
-
-`index` indexes the query, `run` the adaptive escalation attempt,
-`attempt` the retry index; the full attempt core is listed under
-[Probe](#probe).
+`compile` turns the queries file into tasks and rubrics, offline: one
+task per query (the id is a content hash of the query text), one rubric
+per distinct expectation set (`triggered_any_of` checks for the
+should-trigger queries, a `triggered_none` check for the should-not
+ones). Then the session is the same round trip as any task cell:
 
 ```
 $ profe validate --skills skills/*/
-$ profe probe --skills skills/*/ --queries eval/smoke.json \
-    --out eval/runs/smoke.jsonl
-$ profe summarize eval/runs/smoke.jsonl --format table
+$ profe compile --skills skills/*/ --queries eval/phase1/juju-cli-train.json
+$ profe run --task-id q-3f2b… --tasks eval/phase1/tasks-trigger.jsonl \
+    --stop-on skill-read --max-tool-calls 12 --timeout 300 \
+    --skills skills/*/ --out OUT/bundle-smoke --extra-metadata env=host
+$ profe grade OUT/bundle-smoke --tasks eval/phase1/tasks-trigger.jsonl \
+    --rubrics eval/phase1/rubrics --out eval/runs-t2/smoke.jsonl
+$ profe report eval/runs-t2/smoke.jsonl
 ```
 
+The trigger rubrics carry no verdict contract: the run ends at the
+first skill read (`--stop-on skill-read` — a should-not query that
+reads a skill has already misrouted and is stopped too), and the
+rubric's trigger checks read the replayed tool-call stream, so the
+graded record carries the routing evidence: `triggered`,
+`first_trigger_skill`, `trigger_call_index`, `expected_skills`. The
+report renders the routing shapes — per-skill rates, cross-trigger
+(misroute) rows, the should-not check and per-run verdicts — from the
+records alone.
+
+`--max-tool-calls` bounds a run that never reads a skill (the cutoff
+applies to both classes — a should-trigger run with no read within the
+cutoff is non-trigger evidence modulo the documented cutoff
+approximation). Pick it once per model, record it via
+`--extra-metadata`, and change it only deliberately (the calibration
+note lives in the project's eval directory).
+
+### A typical task grading session
+
+A **task** (JSONL row) pairs a prompt with a verdict contract, a rubric
+id and its artifacts (the contract mentions a ``` fence, so this block
+uses four-backtick fencing):
+
+````json
+{"id": "la-327",
+ "prompt": "Please analyze the debug-log.txt and db-dump.yaml attached (from canonical/mysql-operators#327, …). I need a root cause analysis.",
+ "contract": "End your answer with a fenced ```yaml block (the only one in your answer) with exactly these fields:\nverdict: charm-bug | infra | user-error | flake\nroot_cause: a one-sentence root cause\nevidence_quotes: …",
+ "rubric": "la-327",
+ "artifacts": ["la-327/debug-log.txt", "la-327/db-dump.yaml"],
+ "precheck": null}
+````
+
+The **rubric** (`eval/rubrics/<id>.yaml`, versioned) is mechanical —
+verdict-block checks, evidence grounded in the artifacts; the check
+types are listed under `profe grade` in [Reference](#reference).
+
+One attempt = one capture bundle, the whole answer this time: no stop
+condition, no yield. On the bare host (the control cell):
+
 ```
-skill                          class            runs  pass-rate  decision
-charmed-mysql-juju-inspect     should-trigger      1       1.00  PASS
-(all others)                   cross-trigger       1       0.00  —
-(should-not queries)           —                   1       0.00  PASS
-
-protocol: serial, neutral cwd, no hint | model: default | skills: 5
-early exit: on first skill read / max_tool_calls=12 | runs: auto | retries: 1
-effort (median/attempt): 43k tok total, 1.1k out, $0.02, 1 tool call, 9s
+$ profe run --task-id la-327 --tasks eval/tasks/log-autopsy.jsonl \
+    --artifacts-dir eval/tasks-artifacts --out OUT/bundle-host \
+    --skills skills/*/ --extra-metadata env=host
 ```
 
+Inside a boundary it is the same command — the caller provisions the
+boundary (toolchain at the same absolute paths, sanitized pi config,
+skills/artifacts pushed or mounted) and pulls the bundle out; working
+recipes, one per boundary, live in `profe/scripts/`. The task
+**precheck**, if declared, executes at run time — inside the boundary,
+where live-cluster ground truth is reachable — and lands in the bundle;
+`--pi PATH` pins the instrument, `--model M` overrides pi's default.
+The boundary can be destroyed once the bundle is out.
+
+Grading is offline — on the runner's host or anywhere else:
+
 ```
-# one queries file per purpose: smoke, per-skill train sets,
-# corroboration subsets, fresh baselines — point --queries at the one
-# you need
+$ profe grade OUT/bundle-host --tasks eval/tasks/log-autopsy.jsonl \
+    --rubrics eval/rubrics --artifacts-dir eval/tasks-artifacts \
+    --out eval/runs/la-327-host.jsonl
 
-# iterate: re-probe one skill's train file after a description edit
-$ profe probe --skills skills/*/ \
-    --queries eval/charmed-mysql-log-autopsy-train.json \
-    --out eval/runs/la-train-v3.jsonl
-$ profe summarize eval/runs/la-train-v3.jsonl --format table
-
-# corroborate with a second model (a dedicated file with just the
-# failing / 0.3–0.7-band queries)
-$ profe probe --skills skills/*/ \
-    --queries eval/charmed-mysql-log-autopsy-train.json \
-    --model deepseek/deepseek-v4.1-flash \
-    --out eval/runs/la-train-v3-ds.jsonl
-
-# fresh 5-skill baseline
-$ profe probe --skills skills/*/ --queries eval/queries.json \
-    --out eval/runs/v7-baseline.jsonl
-$ profe summarize eval/runs/v7-baseline.jsonl --out eval/reports/v7-baseline.json
+$ profe report eval/runs/la-327-host.jsonl            # single-cell report
+$ profe report eval/runs/la-327-off.jsonl eval/runs/la-327-host.jsonl
+                                                      # A-vs-B comparison
 ```
+
+`--skills` on grade is record metadata only — the bundle's sidecar
+carries the skills that actually ran; the literal `none` (the default)
+records the skills-off counterfactual condition for hand-assembled
+bundles.
+
+```
+# a retry is a fresh boundary — label it --run N with a fresh --out
+# and grade that bundle too
+
+# the record format is the same whoever ran the attempt (host, VM, CI
+# machine) — stamp the boundary with --extra-metadata env=… so cells
+# stay attributable
+```
+
+## Reference
+
+### `profe validate`: structure check
+
+Thin wrapper over `skills-ref validate`: frontmatter, name/description
+limits, body budget. Validates *structure only* — it cannot assess
+trigger behavior (that's the trigger rubrics' job) or answer quality
+(`grade`).
+
+```
+profe validate --skills <path>...
+```
+
+### `profe compile`: queries → trigger-cell tasks + rubrics (offline)
+
+One task per query, one rubric per distinct expectation set. Pure
+offline rewriting: no pi launch, no network. The tasks file feeds
+`profe run`, the rubrics dir feeds `profe grade`.
+
+```
+profe compile --skills <path>... --queries eval/smoke.json
+              [--tasks eval/tasks-trigger.jsonl]
+              [--rubrics-dir eval/rubrics]
+```
+
+- `--skills <path>...` loads the skills so the expectations can be
+  checked against them (every `expected_skills` name must be among the
+  `--skills` paths — a task expecting a skill that is not loaded would
+  silently never pass); at least one is required. Loading everything is
+  a shell glob away: `--skills skills/*/`.
+- Startup checks on the queries file: the schema declaration must be
+  present and 1, unrecognized fields are forbidden (an input the format
+  did not design for is rejected rather than guessed at), and no field
+  may hold a bare string where a list is required.
+- Task ids are content hashes (`q-<hash8(query)>`); rubric ids hash the
+  expectation set (`trig-<hash8(expectations)>`). A query compiled
+  twice compiles to the same id; identical expectation sets share one
+  rubric file. Empty expectation lists get their own rubric id (a
+  should-not class of its own).
+
+### `profe run`: one attempt, evidence only
+
+Runs a **single task attempt** and records everything about it as a
+capture bundle — no rubric, no scoring, no retries (one invocation is
+one attempt; batching and re-running after failure are the caller's
+loop, ideally one boundary per attempt). This is the verb meant to run
+*inside* a sandbox boundary (see
+[the boundary-agnostic split](#the-boundary-agnostic-split)): it needs
+only pi on PATH, the tasks file and the task's artifacts.
+
+```
+profe run --task-id mysql-511 --tasks eval/tasks/live-bugs.jsonl
+          --artifacts-dir eval/tasks-artifacts --out OUT/bundle
+          [--skills <path>...] [--model M] [--timeout 600]
+          [--stop-on skill-read] [--max-tool-calls N]
+          [--pi-config DIR] [--pi PATH] [--extra-metadata KEY=VALUE...]
+          [--run 0]
+```
+
+- `--out DIR` receives the **capture bundle**: `prompt.txt` (the exact
+  prompt, contract included), `stream.jsonl` (profe's own tee of pi's
+  event stream — written live, flushed line by line, so it grows while
+  the attempt runs), `session.jsonl` (pi's own session file, copied
+  verbatim from pi's scratch home **after the attempt ends** — it does
+  not exist mid-run; if pi dies before persisting one, the run fails
+  loudly) and `capture.json` (sidecar: task/run identity, wall
+  time, pi exit code and version, the forwarded skill paths, any stop
+  reason, session source). When the task declares a `precheck`, it
+  executes as part of the attempt and lands in the bundle too
+  (`precheck.json`, `precheck-output.txt`) — the grader then needs no
+  live cluster, which is what makes grading on a Testflinger machine or
+  after the boundary is destroyed possible.
+- `--skills` pins the skill dirs forwarded to pi (validated first) —
+  the same loading discipline as compile/grade.
+- `--stop-on skill-read` is the trigger-cell condition: the attempt is
+  killed at the first SKILL.md read of any loaded skill, and the run
+  ends there (a misroute stops too). Without it, the whole answer is
+  collected.
+- `--max-tool-calls N` is the tool-call cap, decoupled from the
+  skill-read yield: it bounds a should-not run that never reads (the
+  cutoff behind the trigger measurement) and any task attempt that
+  wanders. A stopped attempt is recorded, not an error: the sidecar
+  carries the stop reason (`early_exit`), the answer carries an inline
+  marker.
+- `--pi-config DIR` is a pi config directory copied into a fresh
+  scratch HOME for the attempt; the `packages` settings key is stripped
+  (pi auto-installs that list at startup, which both breaks restricted
+  boundaries and makes attempts depend on the npm registry). Default:
+  `~/.pi/agent`.
+- `--pi PATH` pins the instrument explicitly (entirely optional;
+  default: resolve `pi` on PATH, first entry wins — e.g. a pinned
+  `/opt/pi/...` prefix in a VM). The flag exists because a PATH leak
+  silently swaps instruments (a harness pi instead of the pinned one
+  parses differently downstream); the resolved binary is validated and
+  recorded in the sidecar (`pi_path`) either way.
+- `--extra-metadata KEY=VALUE...` stamps free-form provenance labels
+  (e.g. `--extra-metadata env=lxd-vm:ubuntu-24.04 provision=<hash>`) —
+  how the caller records *which boundary* produced a bundle. Labels
+  ride into the sidecar and are copied into the grade record
+  (`extra_metadata`); absent labels are simply omitted. Duplicate or
+  malformed items fail the run before pi starts.
+- Artifacts are staged read-only into a fresh per-attempt temp dir, and
+  the attempt runs in a neutral cwd, same protocol constants as grade.
+
+### `profe grade`: score a capture bundle mechanically (offline)
+
+Grades the attempt captured in a **capture bundle** — its composition
+is listed under `profe run`. Bundles are `profe run`'s normal output
+(or can be assembled by hand, same layout). A **task** (JSONL: `id`,
+`prompt`, `contract`, `rubric`, `artifacts`, optional `precheck`) is
+scored against its **rubric** (`eval/rubrics/<id>.yaml`: an id, a
+version, and a list of checks). Grading is deterministic and LLM-free,
+and launches nothing — no pi, no subprocess, no network:
+
+- the **verdict block** is the last fenced ` ```yaml `/` ```json ` block
+  of the answer, parsed with `yaml.safe_load`; `schema_ok` records
+  format compliance separately from correctness (a weak model may fail
+  at producing the block, not at the substance) — None for tasks with
+  no contract;
+- `field_equals` / `field_regex` / `field_not_regex` / `field_present`
+  operate on the parsed verdict (dotted paths reach into nested maps);
+- `evidence_in_artifacts` grounds every quoted line against the task's
+  artifacts (word-subsequence semantics: wrapped lines, skipped caret
+  lines, `" / "` joins and appended annotations are forgiven —
+  paraphrase and fabrication are not);
+- `skill_triggered` / `triggered_any_of` / `triggered_none` read the
+  replayed tool-call stream (the trigger checks — grade-time `--skills`
+  cannot influence them): a trigger is a skill's SKILL.md read, detected
+  from the session's tool-call events (`tool_execution_start` with a
+  read/bash tool whose arguments contain `<skill-name>/SKILL.md`), and
+  every record carries the `triggered` map plus the rubric's
+  `expected_skills`, so the report's routing shapes stay runs-file-only;
+- `precheck_field_equals` compares a verdict field with a field of the
+  task precheck's JSON output — recorded at run time inside the
+  boundary, never baked into the rubric and never executed by the
+  grader. A precheck-less bundle for a task that declares one is a hard
+  error.
+
+The model is not an input: it is extracted from the session's message
+payloads — the record carries what actually ran, not what a caller
+asked for (pi's own fallbacks included).
+
+```
+profe grade eval/runs-t2/<name>-bundle \
+    --tasks eval/tasks/log-autopsy.jsonl \
+    --rubrics eval/rubrics --artifacts-dir eval/tasks-artifacts \
+    [--skills <dir>... | none] --out eval/runs-t2/<name>.jsonl
+```
+
+`--skills` is record metadata only, and only for hand-assembled bundles
+without sidecar skills (the `loaded_skills` condition — the attempt
+already ran); `none` records the skills-off condition. Output
+is crash-safe and resumable (a (task, run) pair with a clean attempt is
+skipped on re-run).
+
+### `profe report`: render graded runs into the durable deliverable
+
+Per-task scores with failed checks named, condition metadata, verdict
+blocks and effort medians — the shareable record of a graded cell. A
+trigger cell additionally gets the **routing** section: per-skill rows
+(should-trigger rate at ≥ 0.5 = PASS), cross-trigger (misroute) rows,
+the should-not check (any-trigger rate ≤ 0.5) and per-run verdicts
+(hit / misroute / miss) per task in the JSON format.
+
+Given exactly two runs files it becomes a paired comparison: score
+deltas, per-check flips (gained/lost), schema-compliance deltas and
+effort deltas (tokens, tool calls, wall time, cost) with aggregates.
+Interleaved collection over back-to-back cells is preferred
+(decorrelation); the comparison only records what it was given.
+
+```
+profe report eval/runs-t2/<name>.jsonl [--out FILE] [--format md|json]
+profe report eval/runs-t2/a.jsonl eval/runs-t2/b.jsonl \
+    [--out FILE.json] [--format md|json]
+```
+
+### The grade record
+
+One capture bundle's outcome plus its condition (schema 5; the schema
+may change between versions — old files are regenerated or converted as
+needed): `task_id`, `rubric_id`, `rubric_version`, `contract_sha256` /
+`rubric_sha256` (content hashes — rubric edits invalidate old scores by
+construction), `schema_ok`, `scores` (per-check id → bool),
+`rubric_score` (mean over checks), `verdict` (the parsed block),
+`precheck_output` (the recorded precheck run), the trigger fields
+(`triggered`, `first_trigger_skill`, `trigger_call_index`,
+`expected_skills` — stamped by the rubric, `[]` for a should-not
+class), the attempt facts (`query`, `answer`, `tool_calls`, `usage`,
+`dur_s`, `clean`, `exit_code`, `early_exit`, …) and the conditions
+(`model`, `loaded_skills`, `tasks_file`, `rubrics_dir`, `pi_version`,
+caller-supplied `extra_metadata`).
+
+Trigger-cell records come from the yielded attempt: the answer may be
+empty (`--stop-on skill-read` ends the run at the read), and `tool_calls`
+entries (`tool` + trimmed `args`, cap 500 calls / 400 chars per arg)
+stop at the yield. Task records carry the full action transcript.
+Answers are kept up to 30 000 chars — verdict blocks must survive.
 
 ## Explanation
 
 Profe has one core concept, an **attempt**
 (one headless `pi --mode json` invocation with the selected skills
-loaded),
-and a verb per job around it.
+loaded), and a verb per job around it: compile turns trigger queries
+into the task/rubric shape, run collects one attempt into a capture
+bundle, grade scores that bundle offline into the one record format,
+report renders the records.
 
 Some design considerations were taken into account:
 
@@ -157,147 +355,126 @@ Some design considerations were taken into account:
   failures (fast, confident, wrong); every generation that tried it paid
   for it in bad numbers. If wall-clock ever forces concurrency back, it
   must be re-validated against a known-clean set first.
-- **Neutral working directory, no hint, no session, no extensions.**
-  The query text is the only per-run variable; anything else in context
-  measurably pollutes or biases the trigger decision.
+- **Neutral working directory, no hint, no session reuse, no
+  extensions.** The query text is the only per-run variable; anything
+  else in context measurably pollutes or biases the decision.
 - **Skill loading is pinned.** Profe forwards the explicitly listed
   `--skills` paths with `--no-skills`, so the recorded `loaded_skills`
   list is exactly what ran: an implicitly discovered skill cannot enter a
   run and steal a trigger decision.
 - **Trigger detection is mechanical.** A trigger is a skill's SKILL.md
-  read, detected from the headless agent's event stream
-  (`tool_execution_start` with a read/bash tool whose arguments contain
-  `<skill-name>/SKILL.md`). It is never inferred from the answer text.
+  read, detected from the headless agent's event stream. It is never
+  inferred from the answer text — so a yielded trigger-cell record
+  grades identically whether or not the answer survived the stop.
 - **Evidence survives every kill.** Events are streamed and recorded as
-  they happen, so a run killed at the timeout or by early exit keeps its
-  trigger state and usage.
+  they happen (`stream.jsonl`, flushed per line), so a run killed at the
+  timeout or by a stop condition keeps its trigger state and usage.
+  pi's own session persistence is always on — the canonical capture is
+  the session file, copied out verbatim once the attempt ends. Grading
+  replays the session file by default; when the runner killed the
+  attempt, pi's session may have lost in-flight tool calls at the flush
+  boundary, and the stream tee is the replay source instead.
 - **Every reported number records its protocol, model, skill count and
   cutoff.** Trigger behavior is model-dependent and skill-set-dependent;
   a number without these is not interpretable.
 - **All state is resumable.** An interrupted batch costs at most its
   in-flight attempt.
 
-### Probe
+### The one attempt, and its stop conditions
 
-Every query names the skill(s) it is meant to trigger via `expected_skills`
-— always a **list**, any-of semantics; a single expectation is a
-one-element list:
+An attempt runs with the task's prompt (contract included) and nothing
+else — the same shape for a trigger cell and a task cell; what differs
+is only whether a stop condition is armed and what the rubric claims.
 
-```json
-{"query": "...", "expected_skills": ["charmed-mysql-juju-inspect"]}
-{"query": "...", "expected_skills": ["charmed-mysql-log-autopsy", "charmed-mysql-nightly-triage"]}
+- **Trigger cells** arm `--stop-on skill-read`: the run is killed the
+  moment any loaded skill's SKILL.md is read — that is the trigger
+  decision, and reading past it buys nothing (for a should-not query
+  the first read is already the false positive to record). The yield
+  ends the attempt; the graded evidence is the replayed tool-call
+  stream.
+- **Task cells** run to completion: no stop condition, the full answer
+  gets graded. `--max-tool-calls` stays available as the runaway guard
+  for both.
+- A stop is recorded, not an error: pi is killed cleanly, the sidecar
+  carries the stop reason (`early_exit: "skill-read"`), the answer
+  carries an inline marker, and the timeout case keeps its own marker.
+
+### Rubric checks read transcript regions
+
+Every check type reads one region of the captured attempt, and the
+regions partition the record:
+
+- the **verdict block** (the last fenced yaml/json block of the answer):
+  `field_equals`, `field_regex`, `field_not_regex`, `field_present`;
+- the **artifacts**: `evidence_in_artifacts` (grounded quoting);
+- the **precheck output** (recorded inside the boundary at run time):
+  `precheck_field_equals` — live-cluster ground truth without a live
+  cluster at grade time;
+- the **tool-call stream** (the replayed session events):
+  `skill_triggered`, `triggered_any_of`, `triggered_none` — the trigger
+  checks. A `skill_triggered` check claims one skill's read; a
+  `triggered_any_of` check claims any member of a skill set (the
+  should-trigger class); a `triggered_none` check forbids all reads
+  (the should-not class).
+
+The compiler maps queries onto exactly these: an expectation set
+becomes one `triggered_any_of` rubric, an empty one a `triggered_none`
+rubric — so a trigger campaign and a task campaign share one task
+pipeline, one record format and one report.
+
+### Effort: yielded vs full
+
+Effort medians (tokens, cost, tool calls, wall time) are computed from
+the records alone. A trigger cell's numbers measure the cost of the
+*trigger decision* (the run ended at the read); a task cell's measure
+the full attempt. Both are useful, they answer different questions, and
+the record's `early_exit` field says which one a number is.
+
+### The boundary-agnostic split
+
+`run` (collect) and `grade` (score) are split so that rubrics and the
+grader stay out of the environment an attempt runs in: the runner
+cannot load rubrics (its CLI has no such flag), and the grader reads a
+bundle and writes a record.
+
+Attempts do not have to run on the host. The grading side (`grade`,
+`report`) never runs pi and never touches a live cluster — it consumes
+capture bundles — so whoever runs the attempts can do so inside any
+boundary the caller cares to draw. Profe is boundary-agnostic: **the
+caller provisions the boundary, profe runs inside it, grading happens
+outside it** (after which the boundary can be destroyed).
+
+Division of labor:
+
+- **Caller** picks the boundary and makes the toolchain visible inside
+  it *at the same absolute paths*: the profe venv and its editable
+  source trees (console-script shebangs are absolute; `.pth` files
+  point at the sources, so the source trees must ship too), the
+  uv-managed python, `skills-ref`, the pinned pi, the skills tree and
+  the tasks/rubrics-adjacent artifacts. A sanitized pi config (no
+  `packages` key) rides in as input; `run` copies it into its own
+  scratch HOME regardless.
+- **profe inside** runs the same faces everywhere — `validate` →
+  `compile` → `run` — and hands the capture bundles out. Measured
+  result: trigger behavior is identical across host, bubblewrap, podman
+  and LXD-VM boundaries on smoke queries; the boundary does not move
+  trigger decisions.
+- **Grader outside**: `grade <bundle>` scores the bundle mechanically
+  into the same record format — model included, extracted from the
+  session; `report` consumes it unchanged, whether the cell was
+  captured on the host or inside a boundary.
+
+Working recipes, one per boundary, live in `profe/scripts/`:
+
+```
+profe/scripts/poc-bwrap.sh    # mounts-only bubblewrap sandbox
+profe/scripts/poc-podman.sh   # rootless container, no image build
+profe/scripts/poc-lxd.sh     # disposable LXD VM (cloud-init + tar push)
 ```
 
-An **empty list** is a should-not query: no skill should fire. The shape
-makes the "no free-floating should-trigger queries" rule structural —
-there is no way to say "should trigger" without naming who, which is
-exactly the point: an "any skill triggered" fallback would silently pass
-the misroutes that are the failures worth catching (e.g. an autopsy
-query deterministically pulled to a triage skill by a keyword).
-
-Startup checks `probe` runs on every queries file: the schema
-declaration must be present and 1, unrecognized fields are forbidden
-(an input the format did not design for is rejected rather than guessed
-at), every `expected_skills` name must be among the `--skills` paths
-(a query expecting a skill that is not loaded would silently never
-pass), and no field may hold a bare string where a list is required.
-
-A run is a **hit** when any expected skill triggered; a run that triggers
-only some *other* skill is a misroute, i.e. a miss, and escalates. The
-expectations drive the adaptive escalation and the per-skill pass rates
-in `summarize`; a should-not run passes only when nothing triggered.
-
-Implements the simplified Phase-1 lifecycle:
-
-- Trigger early exit: a run is killed the moment its trigger question is
-  answered — on the first skill read (`early_exit: "trigger"`, whatever
-  the query class: for a should-not query that is a false positive), or,
-  with no skill read, after `--max-tool-calls` tool calls
-  (`early_exit: "max_tool_calls"`; the cutoff applies to both classes —
-  a should-trigger run with no read within the cutoff is non-trigger
-  evidence modulo the documented cutoff approximation). Phase-1 answers
-  are truncated by design and never graded.
-- Adaptive runs (`--num-runs :auto:`, the default): one run per query;
-  escalate (cap 3) only on non-decisive outcomes — a miss that could still
-  pass (should-trigger runs that have not triggered any expected skill
-  yet, while a pass is still reachable within the cap), a should-not run
-  that triggered (corroborate a false positive before concluding), an
-  errored or timed-out run (errors are not trigger evidence, even when a
-  trigger was preserved), or a boundary rate (exactly 0.5) that one more
-  run could flip. Most clean queries conclude on the first run; boundary
-  cases reproduce fixed-N=3 semantics. Transient errors are retried once
-  within a run. An explicit `--num-runs N` fixes N runs per query with no
-  escalation — for instrument validation and per-(query, run) agreement
-  checks against a previously produced runs file.
-- `--max-tool-calls` is a protocol constant calibrated from recorded runs
-  (every observed trigger on the default model fired at tool-call #1,
-  66/66 across two clean sets; 12 keeps headroom for models that explore
-  before reading — see the calibration note in the project's eval
-  directory). Pick it once per model, record it in every report footer and
-  in every record's condition metadata, and change it only deliberately.
-- JSONL output: one record per attempt, carrying the **attempt core**:
-  `schema` (record/report format version; 2 = nested cost breakdown, 1 = legacy flat cost — both readable), `index`, `query`,
-  `expected_skills` (verbatim echo of the query's expectations — the
-  same list; `[]` for should-not), `run`, `attempt`, `clean`,
-  `triggered` map for all loaded skills, `first_trigger_skill`,
-  `trigger_call_index` (1-based index counting ALL tool calls, not just
-  skill reads), `early_exit` (`trigger` | `max_tool_calls` | null),
-  `timed_out`, `errored`, `exit_code`, `error`, `retries_seen`,
-  `stderr_tail` (drained pi stderr, for Case-E diagnosis), `answer`
-  (truncated to 2000 chars — Phase-1 answers are truncated by design
-  and never graded), `n_tool_calls`, `usage` (tokens/cost, summed over
-  streamed messages — Phase-2 overhead accounting reads this even from
-  Phase-1 files), `dur_s`, and condition metadata (`model`,
-  `loaded_skills` list, `queries_file`, `max_tool_calls`, `num_runs`,
-  `ts`). Crash-safe and resumable: a query with a decisive conclusion is
-  skipped on re-run. Input and output match by name: every record
-  carries `expected_skills` and `loaded_skills`, and the gap between
-  them is exactly what the run measured.
-
-### Summarize
-
-First clean attempt per run drives every rate. A run is a **hit** when
-any expected skill triggered; a run that triggers only non-expected
-skills is a **misroute** and counts as a miss. Queries with a non-empty
-`expected_skills` pass when the hit rate is ≥ 0.5; empty ones (should-not)
-pass when nothing triggered, at rate ≤ 0.5. The two classes are derived
-from whether `expected_skills` is empty (not stored separately), and
-every reported number records the protocol, model, skill count and
-cutoff it was produced under.
-
-Expectations drive three views over the same runs:
-
-- **Per-skill rows** (table and JSON): for each skill, over the queries
-  that list it, the rate of runs where *that* skill triggered; PASS at
-  ≥ 0.5. A one-element list makes the skill's row identical to the query
-  decision — misroutes show up as the failures they are. An any-of list
-  passes the query on any member, but each listed skill's own row counts
-  the query by whether *that* skill triggered, so a persistently
-  one-sided routing shows up as a 0-rate for the other member: that is
-  the data a dual-trigger policy decision needs.
-- **Cross-trigger rows**: for each skill, the rate at which it triggered
-  on runs where it was not expected — should-not runs included, where
-  any trigger is a false positive. One rate per skill and class: the
-  misroute table.
-- **Per-query entries** (JSON only): query, expectations, per-run
-  trigger state, hit/misroute outcome, decision — the view that
-  description iteration actually works from.
-
-Effort medians over the first-clean attempts (input/output tokens, cost,
-tool calls, wall time) are reported alongside the rates, overall and per
-query class. Under early exit these measure the cost of the *trigger
-decision*, not of the task (Phase-1 answers are truncated by design): they
-say how expensive it is to get this model to route, and what the
-measurement itself cost. Phase-2 effort accounting reads the full
-attempts instead.
-
-### Grade, compare, report (WIP)
-
-Same attempt concept, full lifecycle: no early exit (the whole attempt is
-what gets scored), the task's verdict contract injected into the prompt by
-the harness, mechanical grading against versioned rubrics. `compare`
-computes paired per-query deltas between cells (skills off/on, model
-variants); `report` renders graded runs into the durable deliverable.
-Every record keeps the shared attempt core plus condition metadata (model,
-loaded_skills, hashes), so files stay self-describing, resumable and
-comparable across phases.
+Each is a complete round trip: provision → validate/compile/run inside →
+bundles out → boundary destroyed → `grade <bundle>` on the host. Read
+them for the per-boundary specifics: what must be mounted, pushed or
+pre-fetched, where outputs land, and which traps were hit and
+documented inline (missing editable source trees, uv python symlink
+names, image pre-fetching).

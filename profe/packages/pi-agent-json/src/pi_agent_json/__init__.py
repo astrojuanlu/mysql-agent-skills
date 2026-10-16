@@ -1,15 +1,21 @@
-"""Typed models of pi's JSON event stream (see `models`)."""
+"""Typed models of pi's JSON event stream and session files."""
 
+from .accumulate import UsageAccumulator
 from .models import (
     AgentEndEvent,
     AgentSettledEvent,
     AgentStartEvent,
     AutoRetryEndEvent,
     AutoRetryStartEvent,
+    CompactionEntry,
     CostBreakdown,
+    CustomEntry,
+    LabelEntry,
     MessageEndEvent,
+    MessageEntry,
     MessageStartEvent,
     MessageUpdateEvent,
+    ModelChangeEntry,
     PiContentBlock,
     PiEvent,
     PiEventBase,
@@ -19,7 +25,9 @@ from .models import (
     PiToolCallBlock,
     PiToolResult,
     PiUsage,
+    SessionEntry,
     SessionEvent,
+    ThinkingLevelChangeEntry,
     ToolExecutionEndEvent,
     ToolExecutionStartEvent,
     TurnEndEvent,
@@ -27,7 +35,9 @@ from .models import (
 )
 from .parse import (
     PiEventParseError,
+    PiSessionParseError,
     parse_pi_event,
+    parse_session_entry,
 )
 
 __all__ = [
@@ -36,24 +46,34 @@ __all__ = [
     "AgentStartEvent",
     "AutoRetryEndEvent",
     "AutoRetryStartEvent",
+    "CompactionEntry",
     "CostBreakdown",
+    "CustomEntry",
+    "LabelEntry",
     "MessageEndEvent",
+    "MessageEntry",
     "MessageStartEvent",
     "MessageUpdateEvent",
+    "ModelChangeEntry",
     "PiContentBlock",
     "PiEvent",
     "PiEventBase",
     "PiEventParseError",
     "PiMessage",
+    "PiSessionParseError",
     "PiTextBlock",
     "PiThinkingBlock",
     "PiToolCallBlock",
     "PiToolResult",
     "PiUsage",
+    "SessionEntry",
     "SessionEvent",
+    "ThinkingLevelChangeEntry",
     "ToolExecutionEndEvent",
     "ToolExecutionStartEvent",
     "TurnEndEvent",
     "TurnStartEvent",
+    "UsageAccumulator",
     "parse_pi_event",
+    "parse_session_entry",
 ]

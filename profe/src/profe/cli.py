@@ -1,9 +1,8 @@
 """The `profe` command-line interface.
 
-Plain argparse over the action functions (`validate_skills`,
-`probe_trigger_runs`, `summarize_trigger_runs`) — no business logic
-lives here: parsing, defaults from the README, printing and exit codes
-only.
+Plain argparse over the action functions — no business logic lives
+here: parsing, defaults from the README, printing and exit codes only.
+One lifecycle: `validate` → `compile` → `run` → `grade` → `report`.
 """
 
 from __future__ import annotations
@@ -14,40 +13,35 @@ from collections.abc import Callable
 from pathlib import Path
 
 from .actions import (
-    probe_trigger_runs,
-    summarize_trigger_runs,
+    build_grade_report,
+    compare_grade_runs,
+    compile_trigger_cells,
+    grade_tasks,
+    run_capture_bundle,
     validate_skills,
 )
-from .actions.summarize import render_summarize_table
-from .models import ProbeOptions, ProbeRunStats, SummarizeOptions, ValidateOptions
-
-
-def _run_count(value: str) -> int | str:
-    """Parse --num-runs: the adaptive policy sentinel or a fixed N >= 1."""
-    if value == ":auto:":
-        return value
-    try:
-        n = int(value)
-    except ValueError as exc:
-        msg = f"expected :auto: or an integer >= 1, got {value!r}"
-        raise argparse.ArgumentTypeError(msg) from exc
-    if n < 1:
-        msg = f"expected an integer >= 1, got {n}"
-        raise argparse.ArgumentTypeError(msg)
-    return n
+from .actions.compare import render_compare_table
+from .actions.report import render_report_markdown
+from .models import (
+    CompileOptions,
+    GradeOptions,
+    RunOptions,
+    ValidateOptions,
+)
 
 
 def _heartbeat(message: str) -> None:
-    """Print one probe progress line, unbuffered (long runs, piped logs)."""
+    """Print one progress line, unbuffered (long runs, piped logs)."""
     print(message, flush=True)
 
 
-def build_parser() -> argparse.ArgumentParser:
+def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 — many
+    # similar subparsers; verbatim clarity over abstraction
     """Build the argument parser: one subparser per verb."""
     parser = argparse.ArgumentParser(
         prog="profe",
         description="Evaluate skills following a structured methodology "
-        "(validate → probe → summarize).",
+        "(validate → compile → run → grade → report).",
     )
     sub = parser.add_subparsers(dest="verb", required=True)
 
@@ -63,8 +57,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     validate.set_defaults(func=cmd_validate)
 
-    probe = sub.add_parser("probe", help="execute trigger queries, record attempts")
-    probe.add_argument(
+    compile_ = sub.add_parser(
+        "compile",
+        help="turn a queries file into trigger-cell tasks + rubrics",
+        description="Offline: one task per query (id is a content hash of "
+        "the query text), one rubric per distinct expectation set "
+        "(triggered_any_of / triggered_none). The tasks file feeds "
+        "`profe run`, the rubrics dir feeds `profe grade`.",
+    )
+    compile_.add_argument(
         "--skills",
         nargs="+",
         required=True,
@@ -72,67 +73,201 @@ def build_parser() -> argparse.ArgumentParser:
         help="skill dirs or SKILL.md files to pin into every run; loading "
         "everything is a shell glob away: --skills 'skills/*/'",
     )
-    probe.add_argument(
+    compile_.add_argument(
         "--queries",
-        default="eval/queries.json",
+        required=True,
         metavar="FILE",
-        help="queries file (default: eval/queries.json)",
+        help="queries file (schema-declared; expectations are any-of "
+        "lists, [] = should-not)",
     )
-    probe.add_argument(
+    compile_.add_argument(
+        "--tasks",
+        default="eval/tasks-trigger.jsonl",
+        metavar="FILE",
+        help="tasks JSONL to write, overwritten (default: eval/tasks-trigger.jsonl)",
+    )
+    compile_.add_argument(
+        "--rubrics-dir",
+        default="eval/rubrics",
+        metavar="DIR",
+        help="directory to write the compiled <rubric-id>.yaml files into "
+        "(default: eval/rubrics)",
+    )
+    compile_.set_defaults(func=cmd_compile)
+
+    grade = sub.add_parser(
+        "grade",
+        help="score a capture bundle mechanically (offline grader)",
+        description="Score one capture bundle (as emitted by `profe run`) "
+        "against its task's rubric — no pi launch, no subprocess, no "
+        "network. The bundle holds pi's own session file (session.jsonl, "
+        "verbatim), the sidecar (capture.json: task/run identity, wall "
+        "time, pi exit code and version, the forwarded skill paths, any "
+        "stop reason) and the exact prompt (prompt.txt), plus the "
+        "recorded precheck output when the task declares a precheck.",
+    )
+    grade.add_argument(
+        "capture",
+        metavar="BUNDLE",
+        help="capture bundle directory to grade",
+    )
+    grade.add_argument(
+        "--tasks",
+        default="eval/tasks.jsonl",
+        metavar="FILE",
+        help="tasks JSONL (default: eval/tasks.jsonl)",
+    )
+    grade.add_argument(
+        "--rubrics",
+        default="eval/rubrics",
+        metavar="DIR",
+        help="rubrics directory, one <id>.yaml per task (default: eval/rubrics)",
+    )
+    grade.add_argument(
+        "--artifacts-dir",
+        default="eval/tasks-artifacts",
+        metavar="DIR",
+        help="artifact files referenced by tasks (default: eval/tasks-artifacts)",
+    )
+    grade.add_argument(
+        "--skills",
+        nargs="+",
+        default=None,
+        metavar="PATH|none",
+        help="fallback skill paths for hand-assembled bundles without "
+        "sidecar skills (metadata only — trigger detection and "
+        "loaded_skills come from the bundle's sidecar when it carries "
+        "them); the literal 'none' records the skills-off condition",
+    )
+    grade.add_argument(
         "--out",
         default=None,
         metavar="FILE",
         help="runs JSONL to append to, resumable "
-        "(default: eval/runs/<queries stem>.jsonl)",
+        "(default: eval/runs/<tasks stem>.jsonl)",
     )
-    probe.add_argument("--model", default=None, help="override pi's default model")
-    probe.add_argument(
+    grade.set_defaults(func=cmd_grade)
+
+    run = sub.add_parser(
+        "run",
+        help="one attempt inside the caller's boundary; emit a capture "
+        "bundle (SANDBOX-EXPLORATION §12)",
+    )
+    run.add_argument(
+        "--tasks",
+        default="eval/tasks.jsonl",
+        metavar="FILE",
+        help="tasks JSONL (default: eval/tasks.jsonl)",
+    )
+    run.add_argument(
+        "--task-id",
+        required=True,
+        help="the one task to attempt (a boundary hosts one cell)",
+    )
+    run.add_argument(
+        "--run",
+        type=int,
+        default=0,
+        help="run index recorded in the bundle (default: 0)",
+    )
+    run.add_argument(
+        "--out",
+        required=True,
+        metavar="DIR",
+        help="capture bundle directory to write (prompt.txt, "
+        "session.jsonl, capture.json, precheck files when prechecked)",
+    )
+    run.add_argument(
+        "--skills",
+        nargs="+",
+        default=None,
+        metavar="PATH",
+        help="skill dirs to pin into the attempt (validated; forwarded "
+        "verbatim to pi and recorded in the sidecar)",
+    )
+    run.add_argument("--model", default=None, help="override pi's default model")
+    run.add_argument(
         "--timeout",
         type=int,
-        default=300,
-        help="single global hang-guard in seconds, not a task budget",
+        default=600,
+        help="single global hang-guard in seconds (default: 600)",
     )
-    probe.add_argument(
-        "--retries",
-        type=int,
-        default=1,
-        help="re-attempts for errored/timed-out runs within a run",
+    run.add_argument(
+        "--stop-on",
+        nargs="+",
+        choices=["skill-read"],
+        default=[],
+        metavar="CONDITION",
+        help="yield on the first SKILL.md read of any loaded skill "
+        "(the trigger-cell stop condition; a misroute stops too)",
     )
-    probe.add_argument(
+    run.add_argument(
         "--max-tool-calls",
         type=int,
-        default=12,
-        help="kill a run with no skill read after this many tool calls "
-        "(calibrated constant; see the eval calibration note)",
+        default=None,
+        metavar="N",
+        help="tool-call cap, decoupled from the skill-read yield "
+        "(the should-not bound and the task-cell runaway guard)",
     )
-    probe.add_argument(
-        "--num-runs",
-        type=_run_count,
-        default=":auto:",
-        metavar="N|:auto:",
-        help="adaptive runs (default :auto:, cap 3) or a fixed N for "
-        "instrument validation and agreement checks",
+    run.add_argument(
+        "--artifacts-dir",
+        default="eval/tasks-artifacts",
+        metavar="DIR",
+        help="artifact files referenced by tasks (default: eval/tasks-artifacts)",
     )
-    probe.set_defaults(func=cmd_probe)
+    run.add_argument(
+        "--pi-config",
+        default="~/.pi/agent",
+        metavar="DIR",
+        help="pi config dir copied into the attempt's scratch HOME "
+        "(default: ~/.pi/agent); the `packages` settings key is "
+        "stripped (the auto-install call breaks restricted boundaries)",
+    )
+    run.add_argument(
+        "--pi",
+        default=None,
+        metavar="PATH",
+        help="pi binary to launch, pinned explicitly (entirely optional; "
+        "default: resolve `pi` on PATH, first entry wins); validated "
+        "and recorded in the sidecar either way",
+    )
+    run.add_argument(
+        "--extra-metadata",
+        nargs="+",
+        default=None,
+        metavar="KEY=VALUE",
+        help="free-form provenance labels recorded in the bundle's sidecar "
+        "and copied into the grade record, e.g. --extra-metadata "
+        "env=lxd-vm:ubuntu-24.04 provision=<hash>",
+    )
+    run.set_defaults(func=cmd_run)
 
-    summarize = sub.add_parser(
-        "summarize", help="aggregate a probe runs file into a report"
+    report = sub.add_parser(
+        "report", help="render graded runs into the durable deliverable"
     )
-    summarize.add_argument("runs_file", metavar="RUNS_FILE")
-    summarize.add_argument(
+    report.add_argument(
+        "runs_files",
+        nargs="+",
+        metavar="RUNS_FILE",
+        help="one graded runs file (single-cell report), or exactly two "
+        "(paired comparison: A vs B per task/run, with per-check flips)",
+    )
+    report.add_argument(
         "--out",
         default=None,
         metavar="FILE",
-        help="also write the JSON report here, whatever --format prints",
+        help="also write the report here (markdown for one file, JSON for "
+        "a two-file comparison)",
     )
-    summarize.add_argument(
+    report.add_argument(
         "--format",
-        choices=["table", "json"],
-        default="table",
-        help="table: skill rows plus condition/effort footer; json: the "
-        "full report with the per-query section",
+        choices=["md", "json"],
+        default="md",
+        help="one file — md: the shareable deliverable, json: the "
+        "structured report; two files — md: the comparison table, json: "
+        "the full comparison report",
     )
-    summarize.set_defaults(func=cmd_summarize)
+    report.set_defaults(func=cmd_report)
     return parser
 
 
@@ -146,43 +281,111 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 0 if report.ok else 1
 
 
-def cmd_probe(args: argparse.Namespace) -> int:
-    """Run the probe action with heartbeat lines on stdout."""
-    out = args.out or str(Path("eval/runs") / f"{Path(args.queries).stem}.jsonl")
-    options = ProbeOptions(
+def cmd_compile(args: argparse.Namespace) -> int:
+    """Compile the queries file into trigger-cell tasks + rubrics."""
+    options = CompileOptions(
         skills=args.skills,
         queries=args.queries,
-        out=out,
-        model=args.model,
-        timeout=args.timeout,
-        retries=args.retries,
-        max_tool_calls=args.max_tool_calls,
-        num_runs=args.num_runs,
+        tasks=args.tasks,
+        rubrics_dir=args.rubrics_dir,
     )
-    stats = probe_trigger_runs(options, progress=_heartbeat)
-    _print_stats(stats)
+    stats = compile_trigger_cells(options, progress=_heartbeat)
+    print(
+        f"compile: {stats.n_queries} queries -> {stats.n_tasks} tasks, "
+        f"{stats.n_rubrics} rubrics -> {stats.tasks_file}",
+    )
     return 0
 
 
-def _print_stats(stats: ProbeRunStats) -> None:
-    """Print the one-line bookkeeping summary of a probe run."""
+def cmd_grade(args: argparse.Namespace) -> int:
+    """Run the grade action with heartbeat lines on stdout."""
+    out = args.out or str(Path("eval/runs") / f"{Path(args.tasks).stem}.jsonl")
+    skills = [] if args.skills is None or args.skills == ["none"] else args.skills
+    options = GradeOptions(
+        capture=args.capture,
+        tasks=args.tasks,
+        rubrics=args.rubrics,
+        out=out,
+        skills=skills,
+        artifacts_dir=args.artifacts_dir,
+    )
+    stats = grade_tasks(options, progress=_heartbeat)
     print(
-        f"probe: {stats.n_queries} queries, {stats.n_runs} runs, "
+        f"grade: {stats.n_tasks} tasks, {stats.n_runs} runs, "
         f"{stats.n_attempts} attempts ({stats.errored_attempts} errored) "
         f"in {stats.dur_s}s -> {stats.out_file}",
     )
+    return 0
 
 
-def cmd_summarize(args: argparse.Namespace) -> int:
-    """Run the summarize action and print the requested format."""
-    options = SummarizeOptions(
-        runs_file=args.runs_file, out=args.out, format=args.format
+def _parse_extra_metadata(items: list[str] | None) -> dict[str, str] | None:
+    """Parse `--extra-metadata KEY=VALUE` items; duplicates fail loudly."""
+    if not items:
+        return None
+    metadata: dict[str, str] = {}
+    for item in items:
+        key, sep, value = item.partition("=")
+        if not sep or not key or not value:
+            msg = f"--extra-metadata: expected KEY=VALUE, got {item!r}"
+            raise ValueError(msg)
+        if key in metadata:
+            msg = f"--extra-metadata: duplicate key {key!r}"
+            raise ValueError(msg)
+        metadata[key] = value
+    return metadata
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    """Run one attempt inside the boundary; emit the capture bundle."""
+    options = RunOptions(
+        tasks=args.tasks,
+        task_id=args.task_id,
+        run=args.run,
+        out=args.out,
+        skills=args.skills or [],
+        model=args.model,
+        timeout=args.timeout,
+        stop_on_skill_read="skill-read" in args.stop_on,
+        max_tool_calls=args.max_tool_calls,
+        artifacts_dir=args.artifacts_dir,
+        pi_config=args.pi_config,
+        pi=args.pi,
+        extra_metadata=_parse_extra_metadata(args.extra_metadata),
     )
-    report = summarize_trigger_runs(options)
-    if args.format == "table":
-        print(render_summarize_table(report))
+    bundle = run_capture_bundle(options, progress=_heartbeat)
+    print(f"bundle: {bundle}")
+    return 0
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    """Run the report action; one file = deliverable, two = comparison."""
+    if len(args.runs_files) == 1:
+        report = build_grade_report(args.runs_files[0])
+        markdown = render_report_markdown(report)
+        if args.out:
+            Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+            Path(args.out).write_text(markdown + "\n")
+        if args.format == "md":
+            print(markdown)
+        else:
+            print(report.model_dump_json(by_alias=True, indent=2))
+        return 0
+    if len(args.runs_files) != 2:
+        print(
+            "error: report takes one runs file, or exactly two to compare",
+            file=sys.stderr,
+        )
+        return 2
+    comparison = compare_grade_runs(args.runs_files[0], args.runs_files[1])
+    if args.out:
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_text(
+            comparison.model_dump_json(by_alias=True, indent=2) + "\n"
+        )
+    if args.format == "md":
+        print(render_compare_table(comparison))
     else:
-        print(report.model_dump_json(by_alias=True, indent=2))
+        print(comparison.model_dump_json(by_alias=True, indent=2))
     return 0
 
 

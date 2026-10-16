@@ -71,8 +71,16 @@ class PiToolCallBlock(PiEventBase):
     arguments: dict[str, t.Any] = Field(default_factory=dict)
 
 
+class PiImageBlock(PiEventBase):
+    """An image content block (`{type: "image", data, mimeType}`)."""
+
+    type: t.Literal["image"]
+    data: str = ""
+    mimeType: str | None = None
+
+
 PiContentBlock = t.Annotated[
-    PiTextBlock | PiThinkingBlock | PiToolCallBlock,
+    PiTextBlock | PiThinkingBlock | PiToolCallBlock | PiImageBlock,
     Field(discriminator="type"),
 ]
 
@@ -95,11 +103,19 @@ class PiUsage(PiEventBase):
 
 
 class PiMessage(PiEventBase):
-    """A message as pi emits it (user, assistant, or tool result)."""
+    """A message as pi emits it (user, assistant, or tool result).
+
+    Tool-result messages additionally carry `toolCallId`, `toolName`,
+    `isError` and `details` (modeled from session files); `role` is
+    deliberately a plain string — pi also emits `bashExecution`.
+    """
 
     id: str | None = None
     role: str
-    content: list[PiContentBlock] = Field(default_factory=list)
+    # pi 1.2.0 streams the system message with `content` as a string
+    # (the prompt text rides in `sections`, allowed via extra=allow);
+    # 0.85.x and all assistant/user/tool messages use block lists.
+    content: list[PiContentBlock] | str = Field(default_factory=list)
     timestamp: int | None = None
     usage: PiUsage | None = None
     stopReason: str | None = None
@@ -107,6 +123,10 @@ class PiMessage(PiEventBase):
     api: str | None = None
     provider: str | None = None
     model: str | None = None
+    toolCallId: str | None = None
+    toolName: str | None = None
+    isError: bool | None = None
+    details: dict[str, t.Any] = Field(default_factory=dict)
 
 
 class PiToolResult(PiEventBase):
@@ -189,6 +209,22 @@ class ToolExecutionStartEvent(PiEventBase):
     args: dict[str, t.Any] = Field(default_factory=dict)
 
 
+class ToolExecutionUpdateEvent(PiEventBase):
+    """Streaming progress of a running tool call (e.g. bash output lines).
+
+    `partialResult` is pi's live snapshot of the result being built; the
+    authoritative final result rides `tool_execution_end`. Modeled after
+    the observed stream (echo/sleep probe, 2026-09-29): content blocks
+    accumulate, `details` may be absent on the first update.
+    """
+
+    type: t.Literal["tool_execution_update"]
+    toolCallId: str | None = None
+    toolName: str | None = None
+    args: dict[str, t.Any] = Field(default_factory=dict)
+    partialResult: dict[str, t.Any] = Field(default_factory=dict)
+
+
 class ToolExecutionEndEvent(PiEventBase):
     """A tool call finished; the result transcript Phase-2 grading reads."""
 
@@ -213,6 +249,96 @@ class AutoRetryEndEvent(PiEventBase):
     finalError: str | None = None
 
 
+# ---------------------------------------------------------------------------
+# pi session files (the durable capture: `~/.pi/agent/sessions/**.jsonl`)
+# ---------------------------------------------------------------------------
+# pi session files carry the same message payloads as the event stream,
+# parent-linked with ids and timestamps — but only the durable entries:
+# no streaming deltas, no tool-execution events. A graded attempt's
+# canonical capture is its session file; the event stream is this
+# vocabulary plus a live firehose envelope.
+
+
+class ModelChangeEntry(PiEventBase):
+    """The session's model was set (`provider`, `modelId`)."""
+
+    type: t.Literal["model_change"]
+    id: str | None = None
+    parentId: str | None = None
+    timestamp: str | None = None
+    provider: str | None = None
+    modelId: str | None = None
+
+
+class ThinkingLevelChangeEntry(PiEventBase):
+    """The session's thinking level was set."""
+
+    type: t.Literal["thinking_level_change"]
+    id: str | None = None
+    parentId: str | None = None
+    timestamp: str | None = None
+    thinkingLevel: str | None = None
+
+
+class MessageEntry(PiEventBase):
+    """One durable message; `message` is the same payload as the stream."""
+
+    type: t.Literal["message"]
+    id: str | None = None
+    parentId: str | None = None
+    timestamp: str | None = None
+    message: PiMessage | None = None
+
+
+class CompactionEntry(PiEventBase):
+    """Context compaction marker; `summary` is the folded-away history."""
+
+    type: t.Literal["compaction"]
+    id: str | None = None
+    parentId: str | None = None
+    timestamp: str | None = None
+    summary: str = ""
+
+
+class LabelEntry(PiEventBase):
+    """A user-assigned label on another entry (`targetId`)."""
+
+    type: t.Literal["label"]
+    id: str | None = None
+    parentId: str | None = None
+    timestamp: str | None = None
+    targetId: str | None = None
+    label: str | None = None
+
+
+class CustomEntry(PiEventBase):
+    """Extension-injected entry (`customType` + opaque `data`)."""
+
+    type: t.Literal["custom"]
+    id: str | None = None
+    parentId: str | None = None
+    timestamp: str | None = None
+    customType: str | None = None
+    data: dict[str, t.Any] = Field(default_factory=dict)
+
+
+SessionEntry = t.Annotated[
+    SessionEvent
+    | ModelChangeEntry
+    | ThinkingLevelChangeEntry
+    | MessageEntry
+    | CompactionEntry
+    | LabelEntry
+    | CustomEntry,
+    Field(discriminator="type"),
+]
+"""Every entry type a pi session file is known to contain.
+
+Same policy as the event vocabulary: an unmodeled entry type is
+instrument debt and fails parsing, never silent data loss.
+"""
+
+
 PiEvent = t.Annotated[
     SessionEvent
     | AgentStartEvent
@@ -224,6 +350,7 @@ PiEvent = t.Annotated[
     | MessageEndEvent
     | MessageUpdateEvent
     | ToolExecutionStartEvent
+    | ToolExecutionUpdateEvent
     | ToolExecutionEndEvent
     | AutoRetryStartEvent
     | AutoRetryEndEvent,

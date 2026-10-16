@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "queries": [
+    {"query": "Test Observer execution 659755 failed on artefact 409577 — pull the artefact and tell me what happened.", "expected_skills": ["charmed-mysql-log-autopsy"]},
+    {"query": "Optimize this MySQL query: SELECT * FROM orders WHERE created_at > NOW() - INTERVAL 30 DAY; it's slow and I need it faster.", "expected_skills": []}
+  ]
+}

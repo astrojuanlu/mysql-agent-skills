@@ -1,0 +1,36 @@
+id: la-202-205
+version: 1
+description: >
+  Ground truth: canonical/mysql-operators#202/#205 (case study), fixed in
+  PR #495. A charm bug: the relation-broken handlers read peer-databag
+  keys that are never guaranteed to exist (logs_synced, cluster-name), so
+  scale-down (unit removal) crashes the broken hooks; Juju retries
+  ~6-10 times and the test times out waiting for unit removal.
+checks:
+  - id: verdict-is-charm-bug
+    type: field_equals
+    field: verdict
+    value: charm-bug
+    description: the KeyError is a charm-code defect, not environmental
+  - id: root-cause-names-keyerror
+    type: field_regex
+    field: root_cause
+    patterns: ["logs_synced|KeyError"]
+    description: the missing peer-databag key is named
+  - id: root-cause-names-broken-handler
+    type: field_regex
+    field: root_cause
+    patterns:
+      - "relation-broken|scale.?down|teardown|broken"
+    description: the failing handler is the relation-broken (teardown) path
+  - id: component-identified
+    type: field_regex
+    field: affected_component
+    patterns:
+      - "log_rotation_setup|_cos_relation_broken|logging-relation"
+    description: the log_rotation_setup/_cos_relation_broken handler
+  - id: evidence-grounded
+    type: evidence_in_artifacts
+    field: evidence_quotes
+    min_quotes: 1
+    description: every quoted line appears verbatim in the artifacts

@@ -1,0 +1,25 @@
+id: ji-live
+version: 1
+description: >
+  Ground truth: the live `testing` deployment itself, re-read at grading
+  time by the task precheck (juju status --format json). Every verdict
+  field must match the precheck's field — self-adjusting truth: if the
+  primary switchover happens between the attempt and the precheck, the
+  mismatch is visible, not silently wrong.
+checks:
+  - id: primary-unit-matches-precheck
+    type: precheck_field_equals
+    field: primary_unit
+    precheck_field: primary_unit
+  - id: units-active-matches-precheck
+    type: precheck_field_equals
+    field: units_active
+    precheck_field: units_active
+  - id: app-status-matches-precheck
+    type: precheck_field_equals
+    field: app_status
+    precheck_field: app_status
+  - id: mysql-version-matches-precheck
+    type: precheck_field_equals
+    field: mysql_version
+    precheck_field: mysql_version

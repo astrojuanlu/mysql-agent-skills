@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "queries": [
+    {
+      "query": "Our mysql-k8s unit mysql-k8s/1 is stuck in blocked status and I don't know why it's blocked. Help me figure out what's wrong with it.",
+      "expected_skills": [
+        "charmed-mysql-juju-inspect"
+      ]
+    },
+    {
+      "query": "Optimize this MySQL query: SELECT * FROM orders WHERE created_at > NOW() - INTERVAL 30 DAY; it's slow and I need it faster.",
+      "expected_skills": []
+    }
+  ]
+}
