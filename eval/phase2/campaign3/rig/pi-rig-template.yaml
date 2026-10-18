@@ -1,0 +1,142 @@
+# c3 rig job TEMPLATE — one attempt on one machine. The driver substitutes
+# __TWIN_QUEUE__ with the target queue — since manifest v2 (pool mode,
+# §3.7) that is the shared fleet queue (manifest `twin_slots`), not a
+# pinned machine's own queue; one instance per arm, arms sequential
+# (driver v3, §4.7).
+#
+# Rig = single-node Canonical K8s (k8s snap) + Juju controller + empty
+# `testing` model + node24/pi-1.2.0/uv, mirroring the reference rig the cost
+# campaigns ran on (host juju 3.6.29, CK8s 1.32-classic, ~/.kube/config with
+# token + ca.crt). Validated end-to-end on a DL380 Gen11 rig 2026-10-16 (probe
+# record: c3 DESIGN §3.6); the same rig body is exercised on the Gen10
+# fleet by the twin-pair rehearsal (dev-branch kit, eval/runs-t6/mr-234/
+# c3-rehearsal/, 2026-10-16).
+#
+# The mr-234 attempt itself is NOT part of this job: after the rig builds,
+# the reserve phase hands the machine to the host-side driver over SSH
+# (payload staging + tmux launch). That keeps the provider key out of this
+# yaml entirely (key rides SSH during reserve, never the job definition).
+#
+# No secrets in this file. Persistent deploy: MAAS reimages the disk on
+# release, so every submit starts from a fresh machine (§3.2).
+
+job_queue: "__TWIN_QUEUE__"   # twin slots: the machine's own queue (§3.7)
+
+# §3.2.1: global_timeout = 6 h (the Testflinger lease maximum); the reserve
+# lease (reserve_data.timeout) covers rig build + 4 h ops wall + recovery.
+global_timeout: 21600
+output_timeout: 3600    # test_cmds is the rig phase ONLY (~8 min) — counts
+                        # from agent pickup (attempt-1 lesson: it killed a
+                        # still-bootstrapping cluster at +1800 s once)
+
+provision_data:
+  distro: noble
+  ephemeral: false      # attempt-1 lesson: ephemeral root is overlayfs (overlayroot);
+                        # containerd overlay snapshots cannot stack on it — the cluster
+                        # never converges. Persistent deploy = real root fs.
+
+reserve_data:
+  ssh_keys:
+    - lp:astrojuanlu
+  timeout: 18000        # 5 h reserve: rig (~25 min) + 4 h ops wall + recovery
+
+test_data:
+  test_cmds: |
+    ssh -o StrictHostKeyChecking=accept-new ubuntu@$DEVICE_IP 'bash -s' <<'RIG'
+    set -ux
+    echo "rig start: $(date -u +%FT%TZ)"
+    echo "=== [rig 1/7] base deps ==="
+    sudo apt-get update -qq
+    sudo apt-get install -y -qq git curl jq rsync tmux || exit 1
+    mkdir -p ~/.pi/agent ~/payload   # landing dirs for the launch-phase payload + pi config
+
+    echo "=== [rig 0/7] hard reset (pool mode, bug 10: release does NOT guarantee a reimage — a reused pair-6/B machine kept pair 5/A's k8s `testing` namespace still present, add-model collided) ==="
+    sudo snap remove --purge k8s juju 2>/dev/null || true
+    sudo rm -rf /var/snap/k8s /var/snap/juju /home/ubuntu/.local/share/juju /home/ubuntu/.config/juju
+
+    echo "=== [rig 2/7] snaps: juju 3.6 + Canonical K8s 1.32 (reference-rig channels) ==="
+    sudo snap install juju --classic --channel=3.6/stable || exit 1
+    sudo snap install k8s --classic --channel=1.32-classic/stable || exit 1
+
+    echo "=== [rig 3/7] Canonical K8s single-node bootstrap + storage check ==="
+    sudo k8s bootstrap || exit 1
+    for i in $(seq 60); do
+      sudo k8s status 2>/dev/null | grep -qE "cluster status:[[:space:]]+ready" && break   # exact match — must not hit "not ready" (attempt-1 bug)
+      sleep 5
+    done
+    sudo k8s status | head -4
+    sudo k8s kubectl get storageclass \
+      || { sudo k8s enable local-storage; sleep 10; sudo k8s kubectl get storageclass; } \
+      || exit 1   # mysql-k8s needs a default PVC provisioner
+
+    echo "=== [rig 4/7] kubeconfig for the ubuntu user (token + CA in ~/.kube, like the reference rig) ==="
+    mkdir -p ~/.kube
+    sudo cp /etc/kubernetes/pki/ca.crt ~/.kube/ca.crt && sudo chown ubuntu:ubuntu ~/.kube/ca.crt
+    sudo k8s kubectl -n kube-system create serviceaccount tf-rig --dry-run=client -o yaml \
+      | sudo k8s kubectl apply -f -
+    sudo k8s kubectl -n kube-system create clusterrolebinding tf-rig-admin \
+      --clusterrole=cluster-admin --serviceaccount=kube-system:tf-rig
+    TOKEN=$(sudo k8s kubectl -n kube-system create token tf-rig --duration=24h)
+    cat > ~/.kube/config <<KCFG
+    apiVersion: v1
+    kind: Config
+    clusters:
+    - cluster:
+        certificate-authority: /home/ubuntu/.kube/ca.crt
+        server: https://127.0.0.1:6443
+      name: k8s
+    contexts:
+    - context:
+        cluster: k8s
+        user: k8s
+      name: k8s
+    current-context: k8s
+    kind: Config
+    users:
+    - name: k8s
+      user:
+        token: ${TOKEN}
+    KCFG
+
+    echo "=== [rig 5/7] node 24.21.0 + pi 1.2.0 (pinned like the reference rig) ==="
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"
+    nvm install 24.21.0 || exit 1
+    mkdir -p ~/.local/profe-t3/pi-1.2.0
+    (cd ~/.local/profe-t3/pi-1.2.0 && npm install @earendil-works/pi-coding-agent@1.2.0) || exit 1
+    ~/.local/profe-t3/pi-1.2.0/node_modules/.bin/pi --version || true
+
+    echo "=== [rig 6/7] uv + egress probes (model API / charmhub / github / pypi / OCI) ==="
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    cat > ~/rig-env.sh <<ENV
+    export PATH="$HOME/.nvm/versions/node/v24.21.0/bin:$HOME/.local/bin:\$PATH"
+    export UV_PYTHON=3.14   # reference-rig interpreter (host venv = 3.14.5); keeps wheels prebuilt
+    export CAMPAIGN_CONTROLLER=jujuc-tf-36  # this machine's rig controller — leak-check navigation rule
+    ENV
+    curl -s -o /dev/null -w 'egress openrouter.ai: %{http_code}\n' https://openrouter.ai/api/v1/models
+    curl -s -o /dev/null -w 'egress api.charmhub.io: %{http_code}\n' https://api.charmhub.io
+    curl -s -o /dev/null -w 'egress github.com: %{http_code}\n' https://github.com
+    curl -s -o /dev/null -w 'egress pypi.org: %{http_code}\n' https://pypi.org/simple/
+    curl -s -o /dev/null -w 'egress files.pythonhosted.org: %{http_code}\n' https://files.pythonhosted.org/
+    curl -s -o /dev/null -w 'egress registry.k8s.io: %{http_code}\n' https://registry.k8s.io/v2/
+    curl -s -o /dev/null -w 'egress registry-1.docker.io: %{http_code}\n' https://registry-1.docker.io/v2/
+    curl -s -o /dev/null -w 'egress ghcr.io: %{http_code}\n' https://ghcr.io/v2/
+    curl -s -o /dev/null -w 'egress rocks.canonical.com: %{http_code}\n' https://rocks.canonical.com/v2/
+
+    echo "=== [rig 7/7] juju controller on Canonical K8s + empty testing model ==="
+    . ~/rig-env.sh
+    juju bootstrap k8s jujuc-tf-36 --model-default logging-config='<root>=INFO;unit=DEBUG' || exit 1
+    juju add-model testing || exit 1
+
+    echo "=== [rig] READY — verification dump ==="
+    juju controllers
+    juju models
+    sudo k8s kubectl get nodes -o wide
+    sudo k8s kubectl get storageclass
+    echo "=== hardware ground truth (c3 probe 5: replaces the CSV's spec guesses) ==="
+    nproc; free -h; df -h /
+    lscpu | grep -E '^(Model name|Architecture)'
+    echo "rig end: $(date -u +%FT%TZ)"
+    touch ~/rig-ready   # SSH-visible readiness marker for the host-side driver
+    echo "=== RIG READY ==="
+    RIG

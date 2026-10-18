@@ -1,0 +1,18 @@
+{
+  "schema": "frozen-prices/1",
+  "campaign": "c3",
+  "vector_usd_per_mtok": {
+    "input": 0.0261,
+    "cache_read": 0.0108,
+    "output": 0.90
+  },
+  "frozen_at": "2026-10-16",
+  "source": "campaign-2 frozen price snapshot (DESIGN \u00a74.2). Re-snapshot at c3 start = edit this file only; nothing else may carry the vector.",
+  "used_by": [
+    "lib/cost.py (the A4 canonical implementation)",
+    "rig/sheet-row.py (via lib/cost.py)",
+    "ANALYSIS-c3.py (via lib/cost.py)"
+  ],
+  "exception": "rig/sample-session.py carries an annotated inline copy: it runs on the DUT, offline from the repo, and enforces live caps \u2014 it is a monitoring surface, not a reporting surface (retro A4).",
+  "retro_reference": "eval/phase2/research/PROFE-TOOLING-RETRO.md A4/A1: one cost implementation under a pinned price file; every sheet, review, and analysis derives from it; never hand-computed again."
+}

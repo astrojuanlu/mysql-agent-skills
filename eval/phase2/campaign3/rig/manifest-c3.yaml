@@ -1,0 +1,56 @@
+# c3 campaign manifest — the frozen pre-registration the driver reads
+# (retro B2: machine-readable pre-registration; "no mid-campaign
+# amendments" as a checker, not vigilance — DESIGN §5/§12, §3.7, §4.3-§4.4).
+#
+# Hash = sha256 over this file's raw bytes (driver v3 computes it at
+# startup, records it in every event, and refuses any attempt whose
+# sidecar manifest label differs). An amendment = edit this file, bump
+# manifest_version, operator sign-off in the delta log — the hash change
+# then makes every pre/post-amendment attempt distinguishable.
+#
+# THIS copy is the CAMPAIGN manifest, version 3 (re-signed 2026-10-18,
+# operator sign-off in the README delta log): frozen_inputs.task =
+# mr-234 (sha 15fbff5a…), rubric = diagnose@2 (sha a5a77653…), POOL MODE
+# in both twin slots (no machine pinning; machine assignment is whatever
+# the scheduler gives and is recorded per attempt, §3.7), total_pairs 30
+# in 3 blocks of 10. Supersedes the rehearsal manifests (v1 per-machine
+# twin, v2 smoke task — archived as manifest-c3-v2-rehearsal.yaml); their
+# ledgers keep their own manifest hashes.
+schema: 1
+campaign: c3
+manifest_version: 4
+# v4 (2026-10-18, operator GO, rig/README delta log "Boundary fast-fail
+# amendment"): adds the job-failed boundary verb + the drive loop's
+# fast-fail check in the ip/rig wait windows. Frozen inputs, caps,
+# watchdog windows, seed formula, blocks: UNCHANGED. The pre-v4 pair-1/A
+# attempt (b853d2ce) is recorded in the ledger under its own stamp —
+# distinguishable by design.
+
+model: openrouter/z-ai/glm-5.3-flash:nitro        # DESIGN §4.2 (pinned)
+frozen_inputs:
+  prices: {file: ../lib/frozen-prices.json, sha256: e87508fd2af29cb4c6f944d74970140ee566fbdbac8c05da92a31eb8acc9d510}
+  rubric: {id: diagnose, version: 2, file: ../rubrics/diagnose.yaml, sha256: a5a77653683deac00f0c04e260ff385d39ee1ca7ddae271e1c7f3eedb8fd5ce0}
+  skills: {count: 5, sha256: fd8bf52fba5a6c19d1856bccffd077f6f845b1621438028cd7b380b314f3dbbf}
+  task: {file: ../tasks/mr-234.jsonl, id: mr-234, sha256: 15fbff5ac31a8c210ef0a984d864897eea8ea22a52e681306e138f4baa1fd71e}
+
+seed_formula: "20261030 + pair"                   # P7; deterministic per pair
+caps:                                             # §4.4
+  cost_usd: 0.30
+  total_tokens: 15000000
+  calls: 250
+watchdog:                                         # §4.4 host-side bounds
+  wall_s: 14400          # 4 h ops wall (kept ITT, wall class)
+  zact_s: 3600           # 60 min zero session activity => infra, rerun
+  stream_stall_s: 1500   # DUT runner guard (25 min, run-attempt.sh)
+  sshfail_max: 8
+  monitor_bound_s: 19800
+  ip_wait_s: 2400        # 40 min device-ip poll
+  rig_wait_s: 2700       # 45 min rig-ready poll
+attempts:
+  max_infra_per_slot: 3  # §4.3; beyond = the slot is SKIPPED to the next
+  #                       work (2026-10-18 operator decision: skip, never pause)
+blocks:
+  size: 10               # §3.1: health re-check at each block boundary
+  total_pairs: 30
+twin_slots:               # §3.7 pool mode: both slots draw from the shared
+  - {a: __TWIN_QUEUE__, b: __TWIN_QUEUE__}   # fleet queue (deployment substitutes)

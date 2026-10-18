@@ -1,0 +1,27 @@
+id: smoke
+version: 2
+description: >
+  Rehearsal-only mechanical rubric for the smoke task (operator decision
+  2026-10-18: rehearsals stop consuming mr-234 runs — bug-finding needs
+  short cycles, so rehearsal pairs run `smoke-rig-tour`, a <10-minute
+  rig-inspection task, while the machinery (submit -> rig -> launch ->
+  monitor -> cap/kill -> recover -> settle -> sheet) stays identical).
+  Everything mechanical is unchanged: the runner's grade step still
+  parses the contract block into graded.jsonl (schema_ok) — this rubric
+  adds no checks and no manual pass.
+
+task: >
+  smoke-rig-tour: inspect the DUT's own rig (Juju models, deployed apps,
+  k8s node count, CPU/RAM) via the juju and k8s CLIs and emit the
+  contract yaml block. Arm-symmetric by construction: the task names no
+  payload path and no skill, so both arms see the same task surface.
+
+mechanical_checks: []
+notes: >
+  NOT for campaign rows: no depth dimensions, no blind protocol, no
+  mechanical checks — the campaign rubric remains diagnose@2. The smoke
+  rubric exists so grade's `--rubrics ../eval/rubrics` resolves a real
+  file for the task's rubric reference, and so the rehearsal manifest's
+  frozen_inputs.rubric pins a file the DUT actually grades against.
+  If the contract block parses (schema_ok true) the rehearsal mechanics
+  validated; report content itself is deliberately ungraded.

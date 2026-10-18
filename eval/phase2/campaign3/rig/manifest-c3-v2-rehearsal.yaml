@@ -1,0 +1,50 @@
+# c3 campaign manifest — the frozen pre-registration the driver reads
+# (retro B2: machine-readable pre-registration; "no mid-campaign
+# amendments" as a checker, not vigilance — DESIGN §5/§12, §3.7, §4.3-§4.4).
+#
+# Hash = sha256 over this file's raw bytes (driver v3 computes it at
+# startup, records it in every event, and refuses any attempt whose
+# sidecar manifest label differs). An amendment = edit this file, bump
+# manifest_version, operator sign-off in the delta log — the hash change
+# then makes every pre/post-amendment attempt distinguishable.
+#
+# THIS copy is the REHEARSAL manifest, version 2 (operator decisions
+# 2026-10-18): (a) POOL MODE — no machine pinning; both slots submit to
+# the shared fleet queue (§3.7), machine
+# assignment is whatever the scheduler gives and is recorded per attempt;
+# (b) SMOKE TASK — rehearsals run `smoke-rig-tour` (<10 min) instead of
+# mr-234, to find machinery bugs in minutes instead of hours. The
+# campaign manifest differs from v2 in frozen_inputs.task (mr-234) and
+# blocks.total_pairs (30) — bump manifest_version and re-sign at
+# campaign launch.
+schema: 1
+campaign: c3
+manifest_version: 2
+
+model: openrouter/z-ai/glm-5.3-flash:nitro        # DESIGN §4.2 (pinned)
+frozen_inputs:
+  prices: {file: ../lib/frozen-prices.json, sha256: e87508fd2af29cb4c6f944d74970140ee566fbdbac8c05da92a31eb8acc9d510}
+  rubric: {id: smoke, version: 2, file: ../rubrics/smoke.yaml, sha256: ac4622bbe03e7657298cab9e8da3486b872311ce6290e12cba15abfb43e7ac3b}
+  skills: {count: 5, sha256: fd8bf52fba5a6c19d1856bccffd077f6f845b1621438028cd7b380b314f3dbbf}
+  task: {file: ../tasks/smoke.jsonl, id: smoke-rig-tour, sha256: 4651d29eaaedf71054f01914a49a825f934a87f5e7e46f68badf390310f95a9f}
+
+seed_formula: "20261030 + pair"                   # P7; deterministic per pair
+caps:                                             # §4.4
+  cost_usd: 0.30
+  total_tokens: 15000000
+  calls: 250
+watchdog:                                         # §4.4 host-side bounds
+  wall_s: 14400          # 4 h ops wall (kept ITT, wall class)
+  zact_s: 3600           # 60 min zero session activity => infra, rerun
+  stream_stall_s: 1500   # DUT runner guard (25 min, run-attempt.sh)
+  sshfail_max: 8
+  monitor_bound_s: 19800
+  ip_wait_s: 2400        # 40 min device-ip poll
+  rig_wait_s: 2700       # 45 min rig-ready poll
+attempts:
+  max_infra_per_slot: 3  # §4.3; beyond = operator decides (campaign pause)
+blocks:
+  size: 10               # §3.1: health re-check at each block boundary
+  total_pairs: 30
+twin_slots:               # §3.7 pool mode: both slots draw from the shared
+  - {a: __TWIN_QUEUE__, b: __TWIN_QUEUE__}   # fleet queue (deployment substitutes)

@@ -1,0 +1,14 @@
+# Campaign ledgers & captures: on-disk evidence, never shipped.
+# Parked 2026-10-18 — unstaged before the source publication. The
+# ledgers (incl. state-campaign's v3/v4-stamped events.jsonl) stay on
+# disk for a possible future resume (replay-verbatim state); they are
+# campaign data, not source, and the captures contain live-rig
+# transcripts + machine IPs. The evidential story lives in the kit:
+# rig/README delta log, the c3-start tag, manifest v4 377154c6.
+eval/phase2/campaign3/rig/state/
+eval/phase2/campaign3/rig/state-v3rehearsal/
+eval/phase2/campaign3/rig/state-v3pool/
+eval/phase2/campaign3/rig/state-campaign/
+
+# Agent-harness session data (handovers contain lab identifiers): on-disk only.
+.pi/

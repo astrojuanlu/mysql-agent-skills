@@ -1,0 +1,34 @@
+# Rig kit lint standard — mirrors profe's [tool.ruff] tone (selective ruleset),
+# with relaxations for the verbatim-port scripts (sheet-row.py is a c2 port;
+# sample-session.py predates the kit).
+# [kit note] ruff>=0.16 defaults to ALL stable rules — too blunt for an ops
+# kit; we pin the same select profe uses so both trees lint identically.
+target-version = "py312"
+
+[lint]
+select = [
+    "F",  # Pyflakes
+    "E",  # Pycodestyle
+    "W",  # Pycodestyle
+    "D",  # Pydocstyle
+    "UP",  # pyupgrade
+    "I",  # isort
+    "PL",  # Pylint
+]
+ignore = [
+    "D203",  # incorrect-blank-line-before-class (prefer D211: no-blank-line-before-class)
+    "D213",  # multi-line-summary-second-line (prefer D212: multi-line-summary-first-line)
+    "PLR2004",  # magic-value-comparison (heuristic thresholds are everywhere)
+]
+
+[lint.per-file-ignores]
+# Verbatim ports / pre-kit scripts: the session-parsing idioms (blind
+# except-continue over jsonl, module-level open over streams, re.S alias,
+# non-executable shebang scripts) are deliberate and shared with their c2
+# originals — do not churn them for lint.
+"sheet-row.py" = ["BLE001", "S110", "S112", "SIM115", "FURB167", "EXE001", "PLR0912", "PLR0913", "PLR0917", "PLW2901", "D102", "D103", "PLC0415", "UP017", "E501"]
+"sample-session.py" = ["BLE001", "S112", "EXE001", "D103"]
+"incidents.py" = ["BLE001", "S112", "SIM115", "PIE810", "EXE001", "PLR0911", "PLR0912", "D103"]
+"test-campaign.py" = ["D102", "D103", "D107", "PLR0911", "PLR0912", "E402", "I001", "E501", "E741", "PLC0415"]
+"test-sheet-row.py" = ["D103", "E402"]
+"status.py" = ["D103", "E501"]

@@ -1,0 +1,155 @@
+id: diagnose
+version: 2
+description: >
+  T4 mode for live, unsolved bugs (no ground truth exists upstream).
+  v1 was rubric-free: mechanical checks (none) plus manual verdict
+  reading. v2 adds the c3 mechanism-depth instrument (§9 item 1,
+  operator decision 2026-10-16 "do extend") while keeping everything
+  mechanical unchanged: the runner's grade step (profe) still parses
+  the contract block into graded.jsonl (verdict + schema_ok) — this
+  rubric adds a HOST-SIDE, BLIND, MANUAL depth pass on top and does
+  not change anything that runs on the machine.
+
+  Endpoint mapping (which depth level the primary endpoint pays for)
+  and the non-inferiority margin are PRE-REGISTRATION DECISIONS,
+  deferred by the operator 2026-10-16 — they belong in §5, not here.
+  The scale below is fixed now so grading can start with pair 1.
+
+task: >
+  mr-234 (mysql-router-k8s rev 916 — per-minute log rotation makes
+  promtail CPU grow with pod age). The mechanism has observable strata;
+  the anchors below are drawn from real runs: c2 pair-9/off reached the
+  deepest stratum (Poll: true internals), c2 ON runs stopped one stratum
+  up ("one tailer per archived file + positions.yaml every 10 s"), and
+  c3 rehearsal pair 1 (both arms) reached the top stratum.
+
+blind_protocol:
+  # The grader must not learn the arm. The transcript itself leaks arm:
+  # only the ON arm has a skills tree, and skill reads (paths under
+  # ~/payload/skills/, SKILL.md, skill names in prose) identify it.
+  input: >
+    A SCRUBBED transcript copy: every skills-tree reference redacted
+    (paths under the skills dir, SKILL.md, the five skill names, and
+    phrases like "the skill says"), plus job/machine/pair/slot metadata
+    stripped. The grader sees one anonymized run directory
+    (`run-<opaque-id>/`) containing the scrubbed transcript and the
+    final contract block. Nothing else.
+  known_leak: >
+    Blinding is imperfect by construction — agent prose may paraphrase
+    skill content without naming it. The grader records suspected arm
+    inference in grader_notes; the analysis reports blinding quality
+    alongside the estimates. Never re-grade to chase a suspected leak.
+  procedure:
+    - >-
+      Read the final contract block first (verdict, root_cause,
+      reproduction, evidence_quotes).
+    - >-
+      Verify the verdict against the transcript's own evidence
+      (verdict_confirmation) - the mechanical schema_ok says nothing
+      about whether the verdict is RIGHT.
+    - >-
+      Assign mechanism_depth using the anchored scale below. Anchor on
+      what the transcript DEMONSTRATES, not what it asserts: a claim of
+      a mechanism without the artifact or measurement that shows it
+      grades at the level the evidence supports.
+    - >-
+      Assign evidence_strength (how the causal claims were established).
+    - >-
+      Write one grade-depth.json record (schema below) into the bundle;
+      the opaque id is resolved back to (pair, slot, attempt) only by
+      the analysis join, never by the grader.
+dimensions:
+  verdict_confirmation:
+    type: enum
+    values: [confirmed, overstated, wrong, unresolved]
+    description: >
+      Does the transcript's evidence support the stated verdict?
+      `confirmed` = the quoted observations entail the verdict;
+      `overstated` = verdict plausible but the evidence shown is weaker
+      than claimed; `wrong` = evidence contradicts the verdict;
+      `unresolved` = transcript does not decide it.
+
+  mechanism_depth:
+    type: ordinal
+    scale: [0, 1, 2, 3, 4]
+    description: >
+      How far down the causal chain the run demonstrably got. Ordered;
+      a run demonstrating level-n criteria also satisfies the lower
+      ones unless it took a wrong turn — grade the DEEPEST level whose
+      criteria are fully met.
+    anchors:
+      0: >
+        Verdict only, or mechanism wrong/guessed. Generic cause
+        ("logging misconfiguration", "promtail is inefficient") with no
+        artifact named and nothing connecting cause to the CPU growth.
+      1: >
+        Symptom-level correlation only. Names the observable phenomena
+        (archive dir gains a file per minute; promtail CPU grows with
+        pod age) but not the causal chain between them; no charm-side
+        localization; remediation ideas generic.
+      2: >
+        System-level mechanism, one or both halves still unlocalized.
+        E.g. "the rotation config keeps every rotated file and promtail
+        watches them all" — the two halves of the chain named at
+        behavior level, but without the charm-side artifacts (which
+        file/knob does what), or one half localized and the other
+        generic.
+      3: >
+        Charm-side localization, both halves. Names the actual
+        artifacts and knobs: the charm's per-minute forced logrotate
+        execution (logrotate_executor + logrotate.j2: `logrotate -f`,
+        `ifempty`, `olddir archive_mysqlrouter`, `rotate 10800`) AND
+        the COS relation's scrape glob
+        (_ROUTER_LOG_FILES_TARGET = /var/log/mysqlrouter/**/*log*)
+        fed to promtail — who does what, with the parameters.
+        (c2 ON stratum: "one tailer per archived file + positions.yaml
+        rewritten every 10 s".)
+      4: >
+        Implementation-level causal chain below the config, with the
+        consumer's internals and the interaction quantified: promtail/
+        grafana-tail opens one tailer per archived file and, because
+        tailer.go runs with Poll: true, polls each with a fixed 250 ms
+        interval (~4 stat/s per watched file, empty files included);
+        CPU-per-file measured (strace newfstatat rate, /proc stat
+        ticks, or an equivalent counterfactual), and the retention-cap
+        interaction stated (rotate 10800 ⇒ bounded file count ⇒
+        steady-state CPU ceiling ≈ 1.5 cores/pod). The c2 pair-9/off
+        stratum — reached by BOTH arms of c3 rehearsal pair 1.
+
+  evidence_strength:
+    type: ordinal
+    scale: [0, 1, 2, 3]
+    anchors:
+      0: asserted — conclusions appear without supporting observation.
+      1: observed — direct observations quoted (ls of the archive dir,
+         the promtail config, a CPU sample) but no manipulation.
+      2: measured — a quantified relationship established from the
+         system itself (CPU ticks vs file count across ages, strace/
+         perf rates), no intervention.
+      3: counterfactual — a manipulated comparison isolates the cause
+         (e.g. scrape path limited to the active log at fixed file
+         count → CPU collapses; restore → returns). Highest grade;
+         none of the anchors requires it.
+
+grade_depth_json_schema:
+  path: <bundle>/grade-depth.json
+  fields:
+    run_id: opaque id from the scrubbed copy (string)
+    verdict_confirmation: confirmed | overstated | wrong | unresolved
+    mechanism_depth: 0-4 (integer)
+    evidence_strength: 0-3 (integer)
+    depth_evidence: >
+      One short paragraph: which artifacts/measurements justify the
+      depth level (names of files/knobs/measurements, quoted snippets
+      at most one line each).
+    grader_notes: anything relevant — suspected blinding leaks, ambiguity
+      between adjacent levels, contract-block deviations.
+    graded_at: ISO-8601 UTC timestamp
+    rubric: "diagnose@2"
+
+mechanical_checks: []
+notes: >
+  The depth anchors are task-specific (mr-234) by design: c3 runs one
+  task family, and a generic depth scale would grade softly exactly
+  where the campaign needs resolution. If c3 later adds tasks, each
+  gets its own anchored scale under this rubric id.
