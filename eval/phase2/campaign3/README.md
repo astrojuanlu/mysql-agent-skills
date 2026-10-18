@@ -117,3 +117,8 @@ in hand per the operator — do not re-derive them).
    under a cap-50 extension): run `ANALYSIS-c3.py`, check the futility
    window, and report to the operator.
 5. After pair 30 (or a stop rule): full ANALYSIS + §5 endpoint reads.
+
+> **Status (2026-10-18): the campaign was stopped before the first paired
+> observation** — see `RETRO-c3.md` for the post-mortem, the root-cause
+> analysis, and the feasibility proposals for any successor campaign.
+> This brief describes the design as frozen; it did not run to completion.
