@@ -78,3 +78,78 @@ Not now (deliberate): A6 (structured termination) wants a profe core change with
 - Scripts reviewed for this retro: `profe/scripts/drive-campaign-c2.sh` (v2.2, 154 lines), `run-cost-campaign-c2.sh` (211), `leak-check.py` (200), `sweep-host-tmp.sh` (66), `power-analysis.py` (266).
 - Direction documents: `profe/SPEC.md` "Design notes (2026-10-05)" + "Explorations" (driver layer open; boundary-agnostic contract; `--pi`/provenance follow-ups), `eval/SANDBOX-EXPLORATION.md` §10–§12 (LXD-VM strategy, testflinger open questions, boundary-agnostic profe).
 - Companion: `../campaign3/DESIGN.md` (§4 the rig, §5 frozen protocol, §6 endpoints, §10 open items — driver v3 references this document).
+
+---
+
+## 6. Disposition at c3 pre-freeze (2026-10-16, appended)
+
+Question at hand: is the retro implemented? Answer: **the campaign-side halves that c3 pair 1 needed are in; the profe-core halves stay deferred** (that was always the split — profe changes want parity re-validation and must not couple to c3). The retro is therefore **kept**, not removed: it remains the input to `profe/SPEC.md` exploration 1, and the open items below are exactly what driver v3 and the §5 batch consume.
+
+| Item | Status in the campaign3 tree | Where |
+|---|---|---|
+| A1 manifest fields (sidecar) | **Partial, campaign-side**: frozen prices file + hash (A4 layer); full sidecar `manifest_hash` deferred to profe core | `lib/frozen-prices.json`; §5 batch |
+| A2 validate-bundle | **Done, campaign-side**: one strict validator all consumers key on; profe-core command deferred | `lib/bundle.py: validate()` |
+| A3 write-once guard | **Done at runner level** (archive-not-overwrite; verified in the c3 runner) — profe-core guard deferred | `rig/run-attempt.sh` |
+| A4 canonical cost | **Done** — one implementation, imported by sheet-row and ANALYSIS; DUT-local `sample-session.py` copy is the documented exception | `lib/cost.py` |
+| A5 record-source field | **Overtaken for c3** — salvage is forbidden (§3.3 fresh-bundle discipline); no mixed-source rows can exist | — |
+| A6 structured termination | **Approximated, campaign-side**: runner records `early_exit` reason; one classifier over it | `lib/bundle.py: classify_termination()` |
+| A7 `profe status` | **Done, campaign-side** (read-only, bundle-derived, writes nothing); profe-core deferred | `rig/status.py` |
+| A8 anti-recommendations | **Standing law** — no boundary/policy/judgment entered profe | — |
+| B1 driver state machine + events.jsonl | **Open → driver v3** (pattern already rehearsed: the twin rehearsal ran on an append-only events log) | c3 §10 item |
+| B2 manifest as pre-registration | **Open → driver v3 + §5 batch** (deferred by operator 2026-10-16) | §5 |
+| B3 reference drivers | **Partial** — the testflinger driver is the c3 one; host/vm variants not needed this campaign | driver v3 |
+| B4 attempt-lifecycle traps | **Overtaken** (VM boundary; teardown-is-trap; job-per-attempt) — as the retro itself anticipated | — |
+| B5 rig-audit | **Deferred deliberately** (host-mode value; c3 boundary makes it forensics; incidents.py record-only covers it) | accepted deferral |
+| B6 watchdog as manifest data + stream kill | **Done at runner level** (kill criterion = zero stream writes; 25-min mmin, validated vs 901 ground truth); params→manifest lands with driver v3 | `rig/run-attempt.sh` |
+| B7 triage patterns as data | **Deferred** — incident rate ~0 with single-tenant VMs + record-only forensics; revisit if c3 produces incidents | accepted deferral |
+| B8 sheet as a view | **Done, campaign-side**: `--regen` rebuilds rows from bundles (verified byte-identical on the twin rows for every bundle-derived column; driver-state columns written as "-") | `rig/sheet-row.py` |
+| B9 attempt-budget accounting | **Open → driver v3** (event-log ledger replaces the c2 arithmetic bug) | c3 §10 item |
+| B10 analysis as committed code | **Done** — reads bundles, never the sheet; stats helper extracted, then moved into profe (see addendum) | `ANALYSIS-c3.py`, `profe/src/profe/stats.py` |
+| P1–P6 priorities | P3 done (pre pair 1, as required); P4 done campaign-side; **P2 is the one open build** (driver v3); P1's manifest half rides §5; P5/P6 as noted above | — |
+
+Net for c3: nothing in the "must land before c3 pair 1" column is missing. Remaining open items are driver v3 (B1/B2/B3/B9), the §5 pre-registration batch, and the profe-core deferrals — all sequenced after the pre-flight submit by design.
+
+Addendum (2026-10-16, later the same day — four dispositions moved on before pair 1):
+
+1. **B10's stats helper left the kit**: `lib/stats.py` moved to
+   `profe/src/profe/stats.py`, scipy/numpy-backed (numpy+scipy are now
+   profe main dependencies). Its parity oracle was then retired — the
+   operator challenged the circularity ("how do I know those are
+   correct?") and was right: the external-ground-truth suite (published
+   tables, closed forms, definitional brute force, defining equations
+   re-solved with an independent root-finder) immediately found TWO real
+   Miettinen–Nurminen bugs the oracles shared (δ<0 bracket violation;
+   boundary-MLE picked by score magnitude instead of derivative sign).
+   Fixed; the migration also surfaced a Wilcoxon convention bug (code
+   ranked after dropping zeros — Wilcoxon-original — while the
+   pre-registration says Pratt; now genuinely Pratt). Full account:
+   `../campaign3/rig/README.md` §"Deltas & decision log".
+2. **§4's "DEVIATIONS.md stays prose" is superseded for c3**: the c3
+   judgment log was folded into the documents it affected (rig README
+   delta log; DESIGN §5.1.4/§9 annotations) and the file removed. The
+   machine-readable event log (B1) remains the driver-side record; the
+   retro's analysis of the c2 log stands as history.
+3. **A2/A4's profe-LIBRARY halves landed pre-pair-1** (operator
+   decision, superseding the "deferred" disposition for the library
+   functions — the profe VERBS remain deferred): `profe.bundle` now
+   owns session-usage walking and bundle reading/validation
+   (stdlib-only, tolerant twin of `profe.models`), so schema knowledge
+   sits next to the code that writes the formats. The campaign keeps
+   pricing, forensics/depth-grade reading and the §4.6 termination
+   classifier (A8); its readers became merge layers over `profe.bundle`.
+   Reading is strict about format (BundleFormatError on non-current-
+   format bundles — the era-compatibility tolerance was removed the
+   same day; five-probe-era shapes are refused, value tolerance for
+   quarantined bundles stays). All campaign regressions byte-identical
+   (real-bundle reader identity, regen rows, status table, twin
+   analysis). Full account: `../campaign3/rig/README.md` §"Deltas &
+   decision log".
+4. The retro itself is still **kept**: driver v3 (B1/B2/B3/B9) and the
+   §5 sign-off batch remain the open items, exactly as above.
+
+Addendum (same night): B10's stats helper moved OUT of the campaign kit
+into profe itself (`profe/src/profe/stats.py`, scipy/numpy-backed,
+numpy+scipy in profe's main dependencies, parity-tested against the
+retired stdlib implementations as oracles). A4's "canonical numbers"
+now have a package home; the campaign analysis imports them from the
+repo's profe tree under uv.

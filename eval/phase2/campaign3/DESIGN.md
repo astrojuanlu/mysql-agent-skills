@@ -1,8 +1,9 @@
 # DESIGN — cost campaign 3 (c3): confirmatory skills A/B on an isolated rig
 
-*Status: **proposed** 2026-10-16. Becomes the c3 pre-registration when
-committed at c3 start (§12); until then the operator may amend it.
-Provenance and review trail: §11.*
+*Status: **committed** — the c3 pre-registration as of the `c3-start`
+tag (2026-10-18; manifest v3 `b853d2ce`). §5/§3 decision content is
+frozen; amendments = edit + `manifest_version` bump + operator sign-off
+in the rig/README delta log. Provenance and review trail: §11.*
 
 ---
 
@@ -89,11 +90,14 @@ verdicts and the qualitative lessons are imported here.
 - **Block** = 10 pairs, run contiguously (nominally one block per day).
   Blocks are the drift checkpoints: per-block estimates are *reported*,
   then pooled with block as stratum.
-- Concurrency: **twin concurrent** — both arms of a pair submit
-  simultaneously as two jobs on two **spec-matched** machines (same
-  hardware model; pool and slot mechanics in §3.7). One mode for the
-  whole campaign. Hardware model is recorded per attempt and reported as
-  a stratum; twin arms always land on the same model (§4.5, §5.4).
+- Concurrency: **twin slots, sequential arms** — both arms of a pair
+  submit as jobs against the shared **Gen10 fleet pool queue** (same
+  hardware family; pool mechanics in §3.7, amended 2026-10-18: no
+  machine pinning, machine assignment is whatever the scheduler gives).
+  One mode for the whole campaign. Hardware is recorded per attempt
+  (hostname + rig ground truth in the bundle) and reported as a
+  covariate/stratum; arms of a pair may land on different machines
+  (§4.5, §5.4).
 - The seeded coin (`seed = 20261030 + pair#`) decides, per pair, which
   twin slot (machine A or B) takes the skills-on arm (P7). There is no
   "first" arm under twin concurrency; the coin neutralizes any
@@ -101,8 +105,11 @@ verdicts and the qualitative lessons are imported here.
 
 ### 3.2 Per-attempt environment (validated recipe)
 
-1. **Submit** one job per attempt, targeting one of the pair's two
-   machines (§3.7). Job yaml pinned and committed: `ephemeral: false` (rig
+1. **Submit** one job per attempt, targeting the pair's pool queue
+   (§3.7 pool mode — rehearsal manifests v2, campaign manifest v3: the
+   shared fleet queue;
+   the scheduler assigns the machine). Job yaml pinned and committed:
+   `ephemeral: false` (rig
    lesson: ephemeral MAAS deploys root on overlayfs, which cannot host
    containerd overlay snapshots — the cluster never converges);
    `global_timeout` = 6 h (the Testflinger lease maximum);
@@ -191,7 +198,7 @@ verdicts and the qualitative lessons are imported here.
   | Lab egress | model API reachable directly from the lab machine (openrouter.ai 200); charmhub/github/pypi 200; all four OCI registries reachable (401 = auth wall, not firewall) |
   | Key injection | provider key rides the **SSH channel during the reserve phase** (post-provision, pre-release); never in the job yaml, job log, or returned bundle — credential scan covers both the auth.json key and the models.json literal apiKey (both CLEAN) |
   | Artifact plumbing incl. killed sessions | full c2-style bundle recovered (stream, session, capture, grading, leak-report, juju models before/after, juju debug-logs, k8s events/pod logs); the killed-session path was exercised for real (driver argument error → RUN INCOMPLETE quarantine, no silent loss) |
-  | Timing fairness | hardware ground truth recorded per attempt (wall-clock policy: §4.4) |
+  | Timing fairness | hardware ground truth recorded per attempt (wall-clock policy: §4.4). Probe-5 caveat: host-side wall time is NOT comparable to DUT-internal wall time (deploy/queue overheads differ) — within-DUT timing is the only rehearsal claim, and c3 timing descriptions (§5.4) compare within-DUT only |
 - **Decision: c3 runs on Testflinger for the whole campaign.** Basis:
   the probes passed (above); the rig is validated end-to-end rather
   than a scale-out maybe; a single rig class removes the
@@ -203,29 +210,45 @@ verdicts and the qualitative lessons are imported here.
   `~/Projects/Canonical/Data Platform/Charmed MySQL/testflinger-playground/`
   — a plain directory outside both trees (sibling of the worktrees, not a
   git repo); its `data/` holds the 2026-10-16 lab inventory and
-  machine-health snapshot used for twin-pool selection (§3.7).
+  machine-health snapshot used for pool-fleet observability (§3.7,
+  amended 2026-10-18: no machine selection is derived from it).
 
-### 3.7 Machine pool and twin slots (spec-matched pairing)
+### 3.7 Machine pool and twin slots (pool mode — rehearsal manifests
+### v2, campaign manifest v3)
 
-- The rehearsal rig (a DL380 **Gen11** machine) is a singleton in the
-  lab pool (2026-10-16 inventory: no second healthy Gen11 exists). It
-  stays on rig-validation/ops duty, not c3 pairs.
-- **Twin pairs come from the ProLiant DL380 Gen10 fleet** (2× Xeon
-  Scalable, Cascade Lake; 56 threads / 3 TB per CSV guesses — ample:
-  campaign 2 ran the entire stack on a 19 GiB workstation). Eight
-  machines assessed healthy on 2026-10-16 (pass streaks 1–7, all idle) → up to
-  4 twin slots. Identical model ⇒ "more or less the same specs" holds
-  within every pair; the rig dumps each machine's ground truth into its
-  bundle anyway.
-- Twin jobs pin machines by targeting each machine's **own queue**
-  (named by canonical_id), so both arms provably land on the intended
-  twin pair. The driver checks `agent_state == waiting` before
-  submitting; a machine grabbed by another queue mid-pair is an infra
-  event (rerun, no slot consumed).
-- Pool hygiene: health re-checked at each block boundary; a machine
-  entering a fail-streak is swapped for a healthy fleet sibling.
-  Hardware *model* stays constant within the campaign, and any swap is
-  disclosed in the deviations log.
+- *Amended 2026-10-18 (operator decision, before any campaign attempt):*
+  *no machine pinning. Arms submit to the shared fleet queue*
+  *and the scheduler assigns whatever machine is*
+  *free; the assignment is recorded per attempt (hostname + hardware*
+  *ground truth in the bundle).* Earlier design: 8 healthy Gen10
+  machines → 4 twin slots with per-machine queues and spec-matched
+  pairing; rehearsals showed that binding a pair to two named machines
+  stalls the campaign whenever one is held (24 h foreign reserves are
+  routine), and machine identity was already randomized by the coin
+  across pairs anyway. The pool makes contention someone else's queue
+  depth: an attempt waits only while the whole fleet is busy.
+- Consequences (accepted): the two arms of a pair may run on different
+  machines (and, since the queue also advertises Gen10 Plus siblings,
+  even different hardware models) — machine identity is a recorded
+  covariate, not a controlled one. The rig dumps each machine's ground
+  truth into the bundle, and the driver records the DUT hostname in the
+  state events and the run sheet's machine column. Arms run
+  SEQUENTIALLY (§4.7 v3), so a pair's two attempts never contend for
+  the same machine.
+- The driver checks the pool queue shows a waiting agent before
+  submitting; a fully-busy fleet is a defer (5 min poll), not an infra
+  failure.
+- Pool hygiene: fleet health re-checked at block boundaries
+  (observability — the inventory/health snapshot stays in
+  testflinger-playground); a machine entering a fail-streak is a
+  provider problem now, not a kit swap — the pool simply stops handing
+  it out. Any systematic drift in machine mix is disclosed in the
+  deviations log.
+- Rehearsals run the smoke task `smoke-rig-tour` (manifest v2): a
+  <10-minute rig-inspection task, same contract-block mechanics as
+  mr-234, so rehearsal cycles validate machinery in minutes (operator
+  decision 2026-10-18). The campaign itself still runs mr-234 under the
+  campaign manifest (§4.2).
 
 ## 4. Frozen protocol
 
@@ -255,12 +278,22 @@ verdicts and the qualitative lessons are imported here.
 
 ### 4.3 Pairs, order, concurrency
 
-- 30 pairs planned; both arms of a pair run concurrently on twin
-  machines (§3.1, §3.7).
+- 30 pairs planned; the two arms of a pair run **sequentially**, one
+  attempt at a time (§3.1; amended from the original twin-concurrent
+  design — sequential arms landed with driver v3 and pool mode,
+  2026-10-17/18; pairing is by pair index, §5).
 - Provisioning failures are **infra** (rerun, no slot consumed). Agent
   behavior — anything inside the machine — stays (§3.5).
-- Max 3 attempts per arm slot on genuine infra failures; beyond that the
-  operator decides (pause the campaign, never drift the rig).
+- Max 3 attempts per arm slot on genuine infra failures. **Amended
+  2026-10-18 (operator decision, pool mode):** beyond the cap the slot
+  is SKIPPED, not a campaign pause — the loop records a `ledger-skip`
+  event, the pair proceeds with the other slot, and ends when both
+  slots are terminal or exhausted; the loop moves to the next pair.
+  Rationale: under a shared pool the per-slot infra counter punishes
+  bad luck (a wedged provisioning draw), not the rig — pair 6/A burned
+  its cap on a dud cluster and pausing the whole campaign for it was
+  the wrong trade (rig README delta log, bug-10 entry). Never drift the
+  rig; a skipped pair's analysis is the paired-diff bound (§5.2).
 
 ### 4.4 Caps
 
@@ -298,7 +331,9 @@ verdicts and the qualitative lessons are imported here.
 2. **Agent behavior**: everything the attempt did inside its machine → keep
    (ITT); incidents logged to `incidents.jsonl` (machine-readable,
    now trivial under isolation) with class = {mutation-attempt,
-   contract-anomaly, other}.
+   contract-anomaly, other} — 2026-10-18: mutation-attempt is no longer
+   captured (§5.1.4 amendment); the class remains only for legacy
+   bundles.
 3. Residual contamination rule: if an attempt reaches campaign internals
    by any unforeseen channel, exclude + rerun + document + **stop and
    redesign** (under c3's rig this should be structurally impossible; any
@@ -307,10 +342,10 @@ verdicts and the qualitative lessons are imported here.
 ### 4.7 Monitoring discipline
 
 Driver runs on the operator host, **outside** the attempt machines
-(state: run sheet, sheet integrity, twin-slot discipline, lab-pool
-health). Monitor turns are **read-only** (P8): observe, report, never
-mutate campaign state, scripts, or rig. The overnight checklist is now
-~4 lines: driver alive, sheet growing, twin jobs paired and progressing,
+(state: run sheet, sheet integrity, pool-queue discipline (§3.7 v2),
+lab-pool health). Monitor turns are **read-only** (P8): observe, report,
+never mutate campaign state, scripts, or rig. The overnight checklist is
+now ~4 lines: driver alive, sheet growing, pool submissions progressing,
 lab-pool health, operator-host disk headroom.
 
 ## 5. Endpoints, sizing, stopping (pre-registered)
@@ -332,17 +367,26 @@ pattern both external reviews recommended):
    McNemar on discordant pairs, **evaluated on c3 pairs only** (c frozen
    from campaigns 1–2: 4-vs-1 discordant at n=13). Declared likely
    underpowered at 30 (needs ~40): a null here does not refute 1–2.
-4. **Behavior safety**: per-attempt rates of (a) in-machine
-   environment-mutation attempts, (b) contract anomalies — with **exact
-   single-arm Jeffreys 95% upper bounds**
+4. **Behavior safety**: per-attempt rate of **contract anomalies**, with
+   **exact single-arm 95% upper bounds**
    (0 events: 26% @ n=10, 14% @ n=20, 9.5% @ n=30; ≤10% needs ≈19–30
-   clean ON attempts); between-arm comparison reported as an
+   clean ON attempts; label finding 2026-10-16: the quoted 26%/14%/9.5%
+   are the CLOPPER–PEARSON bounds, 1−0.05^(1/n) — the true Jeffreys
+   bounds are 17.1%/9.1%/6.2%, verified via the F-distribution identity.
+   ANALYSIS-c3.py reports both. **Resolved 2026-10-17 (operator): the
+   safety rule reads CLOPPER–PEARSON** — the conservative reading; the
+   ≈19–30 sizing holds under either).
+   **Amended 2026-10-18 (operator): in-machine environment-mutation
+   attempts are NO LONGER an endpoint and are not recorded** —
+   incidents.py's destroy-model/add-model/bootstrap capture is retired;
+   under pool mode every machine is freshly minted (hard reset per job),
+   so mutation persistence has no campaign meaning. The sheet's mut cell
+   stays as a legacy zero for schema stability.
+   Between-arm comparison reported as an
    unconditional exact CI on the rate difference (Boschloo/Miettinen–
    Nurminen), **never** as Fisher-conditioned accumulation. Stopping for
    safety uses the ON-arm bound alone — more OFF disasters are never
-   rewarded. Expected to reproduce c2's OFF-vs-ON asymmetry (OFF arms
-   self-build decoy environments; ON arms have not) — now a behavioral
-   endpoint with no operational risk.
+   rewarded.
 
 Descriptive/secondary (no claims): dollars at frozen prices + the
 price-sensitivity vector table (cache×3, cache=in, out×0.5, out×2,
@@ -364,8 +408,8 @@ skills listed/read/adhered.
 - Hard cap **50**, continuation beyond 30 only if (a) futility was not
   triggered and (b) family member 1 or 2 is still unresolved (CI spans
   "no effect" and "meaningful"). Continuation is a **new block** with a
-  one-paragraph justification in the campaign deviations log, never
-  silent.
+  one-paragraph justification in the campaign record (the rig
+  `README.md` delta log + the driver `events.jsonl`), never silent.
 
 ### 5.3 Stopping
 
@@ -393,21 +437,35 @@ skills listed/read/adhered.
 
 ## 6. Skills measurement and policy
 
-- **Allowed pre-freeze edits** (before c3 pair 1, then frozen):
-  1. `mysql-charms-source`: teach the staged layout — "charm source
-     is provided in the workspace at `<path>` (pre-fix revision); do not
-     clone — use the provided tree; never read outside your workspace" —
-     replacing the clone-from-scratch-dir guidance that plausibly
-     produced both campaign-2 contamination attempts (5/on, 10/on alias
-     path). The guidance is about using what is provided, not about
-     what is reachable (§3.3).
+- **Pre-freeze skill edits — operator decision 2026-10-16 (amends the
+  original proposal, kept below for provenance):**
+  1. **NO staged-layout guidance in any skill.** The c3 rig stages no
+     charm source tree (tasks-artifacts carry the bug report only), so
+     "provided in the workspace" guidance would describe an environment
+     that does not exist; environment-orientation facts must not differ
+     between arms regardless — the skills carry domain knowledge only,
+     keeping the ON/OFF contrast clean. The skill's existing workflow
+     already anchors source reading to the DEPLOYED revision ("clone
+     only the tag you need", rev→tag mapping), which is the
+     anti-contamination property that matters. The residual surface —
+     reading the live issue thread, or cloning revisions newer than the
+     deployed one — cannot be blocked (§3.3, network stays open) and
+     does not invalidate (§4.6): it is recorded (`incidents.json`
+     `git_sources` + `gh_commands`) and adjudicated at analysis.
   2. The known adherence traps (the four pair-10/on friction points, all
      already covered by current SKILL.md text) stay as-is — the gap is
      adherence, and c3 measures it.
-- **Decide before freeze (open item §9):** whether the ON prompt gets a
-  "stop at verdict-sufficient evidence" norm (rationale: the pair-10/on
-  lesson, §1). Any such norm applies to **both arms** (it is a prompt
-  change, not a skill), or not at all.
+  3. Original proposal (overridden): teach the staged layout in
+     `mysql-charms-source` — "charm source is provided in the workspace
+     at `<path>` (pre-fix revision); do not clone — use the provided
+     tree; never read outside your workspace" — replacing the
+     clone-from-scratch-dir guidance that plausibly produced both
+     campaign-2 contamination attempts (5/on, 10/on alias path).
+- **Norm decision (open item §9), operator decision 2026-10-16: NO
+  "stop at verdict-sufficient evidence" norm.** With the rubric extended
+  to grade mechanism depth (§9), the campaign wants natural behavior;
+  an early-stop norm could suppress exactly the deep-mechanism work the
+  depth rubric exists to see. The prompt stays unchanged in both arms.
 - **Adherence metrics** (from §4.5 fields): per ON run, fraction of known
   documented traps avoided; reported as the adoption→adherence story.
 - **Skill versioning**: skills are a release; a post-freeze edit is a P2
@@ -431,11 +489,13 @@ skills listed/read/adhered.
 
 - API spend: 60 attempts × ≈ $0.07 ≈ **$4–5** expected; worst case
   bounded by caps: 50 pairs × 2 arms × $0.30 = **$30**.
-- Wall time (twin concurrent on the Gen10 fleet, §3.7): per pair-slot ≈
-  deploy 13 min + rig 7.5 min + run (budget-capped; ops wall limit 4 h)
-  + recovery ≈ 2 min → typically ≈ 55–85 min, worst case bounded by the
-  4 h ops wall limit. Four healthy fleet machines ⇒ 2 pairs in flight ⇒
-  a 10-pair block ≈ 5–8 h of machine time, queue permitting.
+- Wall time (sequential arms from the Gen10 pool, §3.7 v3; arms no
+  longer run concurrently — the v3 host driver runs one arm at a
+  time): per pair ≈ deploy 13 min + rig 7.5 min + run (budget-capped;
+  ops wall limit 4 h) + recovery ≈ 2 min, ×2 arms → typically ≈ 2×
+  30–45 min, worst case bounded by the 4 h ops wall limit. The pool
+  queue (10+ waiting Gen10s) keeps the wait-to-machine ≈ 0; a 10-pair
+  block ≈ one day of machine time, fleet permitting.
   Provisioning compute is remote and free.
 - Storage: bundles ≈ 60 × few-MB on the operator host; machines hold
   nothing after release.
@@ -444,24 +504,39 @@ skills listed/read/adhered.
 
 Resolved 2026-10-16, no action: Testflinger probes (§3.6); charm
 pre-cache list (moot — the network stays open, §3.3); egress allow-list derivation (§3.3); pair/arm code randomization
-map (P7, §3.1). Each remaining item is cheap; none blocks the design.
+map (P7, §3.1); the §6 stop-at-sufficient-evidence norm (**no** — §6);
+staged-layout guidance (**no** — §6). Each remaining item is cheap; none blocks the design.
 
-- [ ] Verdict correctness: extend the mr-234 rubric to grade mechanism
-      depth, grade **all** c3 runs blind, pre-declare the non-inferiority
-      margin (campaign-2 mining found an OFF arm reaching the deeper
-      mechanism — decide explicitly what depth the rubric pays for).
-- [ ] The §6 stop-at-sufficient-evidence norm: yes (both arms) or no.
-- [ ] `ANALYSIS-c3.py` committed **before pair 1** — per
+- [x] Verdict correctness: extend the mr-234 rubric to grade mechanism
+      depth, grade **all** c3 runs blind. **Resolved 2026-10-18
+      (operator): the depth grade is DESCRIPTIVE-ONLY** — reported per
+      arm and per pair (the c2 finding that an OFF arm reached the
+      deeper mechanism is worth seeing), but it carries no confirmatory
+      weight and no pre-declared non-inferiority margin: the
+      confirmatory endpoints stay calls/tokens (§5.1). Rubric v2's
+      depth scale stays as the descriptive instrument.
+      §5 sign-off batch: the §5.1.4 bound label is resolved —
+      **Clopper–Pearson** (2026-10-17, annotated in §5.1.4).
+      **Mutation recording: NO (2026-10-18 operator decision) —
+      executed**: incidents.py's mutation capture is removed and
+      §5.1.4's mutation endpoint is dropped (contract anomalies only;
+      incidents' remaining counters stay record-only, §4.6).
+- [x] `ANALYSIS-c3.py` committed **before pair 1** — per
       `../research/PROFE-TOOLING-RETRO.md` A4/B10: the analysis script is
       frozen with the design (reads bundles + the canonical cost helper,
-      not the sheet).
-- [ ] Driver v3 per `../research/PROFE-TOOLING-RETRO.md` B1–B3 (state
+      not the sheet). **Done 2026-10-16** (freeze status, rig/README).
+- [x] Driver v3 per `../research/PROFE-TOOLING-RETRO.md` B1–B3 (state
       machine + append-only event log + manifest reader + per-boundary
       reference drivers): c2 shape (skip-if-valid, infra/run distinction,
       ≤3 attempts) minus salvage paths (§3.5), plus the §4.4 caps;
-      host-side state/run sheet; twin submits per §3.7.
-- [ ] Model-API reachability probe on the DL380-Gen10 class (first
-      rig-validation run) — verified on a DL380 Gen11 rig only (§3.6).
+      host-side state/run sheet; pool submits per §3.7 (v2: no machine
+      pinning). **Done 2026-10-16, rehearsal-proven 10-17; superseded
+      2026-10-18 by the PROFE-DRIVE cutover** — the mechanism now lives
+      in `profe/src/profe/driver/` (committed, ty-strict, 40-test suite),
+      the campaign judgment in `rig/campaign.py`.
+- [x] Model-API reachability probe on the DL380-Gen10 class — **done in
+      the rehearsal pairs (2–7), which ran real model calls on Gen10
+      pool machines** (bundles in `rig/state-v3pool/`).
 
 ## 10. Generalization follow-on (after c3, not part of it)
 
@@ -499,6 +574,9 @@ number of runs.
   §3.7).
 - Standing lessons carried in: read-only monitoring (§4.7), ITT for
   capped runs (§4.4).
+- Rig-kit provenance, port deltas, and the campaign judgment log
+  (absorbs the former DEVIATIONS.md, removed 2026-10-16):
+  `rig/README.md` §"Deltas & decision log".
 
 ## 12. Freezing
 
