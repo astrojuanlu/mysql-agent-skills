@@ -339,6 +339,46 @@ entries (`tool` + trimmed `args`, cap 500 calls / 400 chars per arg)
 stop at the yield. Task records carry the full action transcript.
 Answers are kept up to 30 000 chars — verdict blocks must survive.
 
+### `profe.stats`
+
+Implementation of paired-experiment statistics (exact sign-flip permutation,
+paired t, Wilcoxon–Pratt, exact McNemar, Jeffreys + Clopper–Pearson bounds,
+Miettinen–Nurminen score CI) on scipy/numpy, stdlib-deterministic at the API level.
+
+```python
+from profe.stats import signflip_exact, jeffreys_upper
+```
+
+The exact permutation keeps a meet-in-the-middle enumerator (scipy's
+exact test enumerates all 2^n sign vectors and cannot honor the n ≤ 40
+guarantee); the Miettinen-Nurminen CI keeps its own score root-finder.
+Each function's docstring cites its source (paper, textbook, or
+standard tables). `tests/test_stats.py` anchors every function to
+EXTERNAL ground truth only — published tables, analytic closed forms
+and identities, definitional brute-force enumeration, and defining
+equations re-solved with an independent root-finder — and
+`profe.stats.selftest()` re-runs the textbook/brute-force checklist.
+
+### `profe.bundle`
+
+Reading and validating attempt bundles — the artifacts profe itself
+writes. `session_usage(path)` walks one `session.jsonl` (component
+usage sums, tool-call count, skill reads); `read_bundle(dir)` returns a
+`BundleRecord` of the sidecar, usage, grade and runner-status facts and
+raises `BundleFormatError` on anything that is not a current-format
+bundle (missing/unparseable required artifacts — era-compatibility
+shims for older writers were removed); `validate_bundle(dir)` returns
+the list of validity reasons (empty = valid) and defines that format.
+Reading is strict about format, tolerant about value:
+`runner-status=incomplete` reads fine (quarantine adjudication needs
+the value) and a truncated session tail is skipped, not fatal.
+Stdlib-only by design, so lightweight consumers —
+recovery drivers, sheet tooling, monitors — parse bundles without
+profe's third-party dependencies; `profe.models.CaptureSidecar` and
+`GradeRecord` are the strict typed twins. Scope boundary: only profe's
+own artifacts are read here — price vectors, forensics counters and
+termination adjudication stay with the consuming campaign.
+
 ## Explanation
 
 Profe has one core concept, an **attempt**

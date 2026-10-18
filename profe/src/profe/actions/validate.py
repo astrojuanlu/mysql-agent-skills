@@ -10,7 +10,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 
-from ..models import SkillValidation, ValidateOptions, ValidateReport
+from .models import SkillValidation, ValidateOptions, ValidateReport
 
 
 def validate_skills(options: ValidateOptions) -> ValidateReport:

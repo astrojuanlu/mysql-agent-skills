@@ -18,7 +18,27 @@ dependencies = [
 ]
 
 [project.scripts]
-profe = "profe:main"
+profe = "profe.cli:main"
+
+[dependency-groups]
+analysis = [
+    "pairedstats",
+]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.9",
+    "ty>=0.0.89",
+]
+
+[tool.uv.workspace]
+members = [
+    "packages/pi-agent-json",
+    "packages/pairedstats",
+]
+
+[tool.uv.sources]
+pi-agent-json = { workspace = true }
+pairedstats = { workspace = true }
 
 [tool.ruff]
 show-fixes = true
@@ -42,19 +62,18 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*" = ["D", "PLR2004"]
 
-[tool.uv.workspace]
-members = [
-    "packages/pi-agent-json",
-]
+[tool.ty.analysis]
+return-type-inference = "always"
+respect-type-ignore-comments = false
 
-[tool.uv.sources]
-pi-agent-json = { workspace = true }
-
-[dependency-groups]
-analysis = [
-    "scipy>=1.16",
-]
-dev = [
-    "pytest>=9.1.1",
-    "ruff>=0.16.9",
-]
+[tool.ty.rules]
+unsound-assignment = "error"
+unsound-return-statement = "error"
+unsound-yield = "error"
+possibly-unresolved-reference = "error"
+possibly-missing-attribute = "error"
+possibly-missing-import = "error"
+missing-type-argument = "error"
+unused-ignore-comment = "error"
+unused-type-ignore-comment = "error"
+blanket-ignore-comment = "error"

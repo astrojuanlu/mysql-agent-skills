@@ -1,0 +1,44 @@
+[build-system]
+requires = ["uv_build>=0.12.14,<0.13.0"]
+build-backend = "uv_build"
+
+[project]
+name = "pairedstats"
+version = "0.1.0"
+description = "Paired statistics for cost campaigns (sign-flip exact, McNemar, MN CI, Jeffreys/CP bounds)"
+readme = "README.md"
+authors = [
+    { name = "Juan Luis Cano Rodríguez", email = "juan.rodriguez@canonical.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "numpy>=2.3",
+    "scipy>=1.16",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.ruff]
+show-fixes = true
+
+[tool.ruff.lint]
+select = [
+    "F",  # Pyflakes
+    "E",  # Pycodestyle
+    "W",  # Pycodestyle
+    "D",  # Pydocstyle
+    "UP",  # pyupgrade
+    "I",  # isort
+    "PL",  # Pylint
+]
+ignore = [
+    "D203",  # incorrect-blank-line-before-class (prefer D211)
+    "D213",  # multi-line-summary-second-line (prefer D212)
+    "PLR2004",  # magic-value-comparison (heuristic thresholds are everywhere)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["D", "PLR2004"]

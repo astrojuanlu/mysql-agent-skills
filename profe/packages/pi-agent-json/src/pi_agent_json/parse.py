@@ -21,8 +21,8 @@ class PiSessionParseError(ValueError):
     """A pi session-file entry does not fit the modeled vocabulary."""
 
 
-_PI_EVENT_ADAPTER = TypeAdapter(PiEvent)
-_SESSION_ENTRY_ADAPTER = TypeAdapter(SessionEntry)
+_PI_EVENT_ADAPTER: TypeAdapter[PiEvent] = TypeAdapter(PiEvent)
+_SESSION_ENTRY_ADAPTER: TypeAdapter[SessionEntry] = TypeAdapter(SessionEntry)
 
 
 def parse_pi_event(raw: dict[str, t.Any]) -> PiEvent:
@@ -45,12 +45,12 @@ def parse_session_entry(raw: dict[str, t.Any]) -> SessionEntry:
     return _parse(raw, _SESSION_ENTRY_ADAPTER, PiSessionParseError, "pi session entry")
 
 
-def _parse(
+def _parse[T](
     raw: dict[str, t.Any],
-    adapter: TypeAdapter,
+    adapter: TypeAdapter[T],
     error_type: type[ValueError],
     what: str,
-) -> t.Any:
+) -> T:
     try:
         return adapter.validate_python(raw)
     except ValidationError as exc:

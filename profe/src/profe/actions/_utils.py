@@ -19,8 +19,8 @@ import tempfile
 import typing as t
 from pathlib import Path
 
-from ..models import SkillRef, Task
 from . import _pi
+from .models import SkillRef, Task
 
 _PROBE_TIMEOUT_S = 120
 _PROBE_TAIL_CHARS = 4000
@@ -62,7 +62,7 @@ def resolve_skills(paths: list[str]) -> list[SkillRef]:
 def _frontmatter_name(md: Path) -> str | None:
     """Read the frontmatter `name:` field, None when absent."""
     match = re.search(r"^name:\s*(\S+)", md.read_text(errors="replace"), re.M)
-    return match.group(1) if match else None
+    return str(match.group(1)) if match else None
 
 
 def stage_artifacts(artifacts: list[str], artifacts_dir: str) -> Path:

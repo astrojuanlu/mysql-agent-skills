@@ -18,8 +18,16 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from ..models import RoutingReport, RunRouting, SkillRate, TaskRouting
 from .grade import load_grade_records, select_attempt
+from .models import (
+    Decision,
+    GradeRecord,
+    RoutingReport,
+    RunRouting,
+    RunVerdict,
+    SkillRate,
+    TaskRouting,
+)
 
 
 class ReportEntry(BaseModel):
@@ -66,13 +74,13 @@ class GradeReport(BaseModel):
     effort: dict[str, float] = Field(default_factory=dict)
 
 
-def _total_tokens(rec: t.Any) -> int:
+def _total_tokens(rec: GradeRecord) -> int:
     """Cache-independent token count (input + cacheRead + output)."""
     usage = rec.usage
     return (usage.input or 0) + (usage.cacheRead or 0) + (usage.output or 0)
 
 
-def _usage_split(rec: t.Any) -> dict[str, int]:
+def _usage_split(rec: GradeRecord) -> dict[str, int]:
     """Return the token accounting a reader needs: the in/out split."""
     usage = rec.usage
     return {
@@ -82,7 +90,7 @@ def _usage_split(rec: t.Any) -> dict[str, int]:
     }
 
 
-def _condition(records: list[t.Any]) -> dict[str, t.Any]:
+def _condition(records: list[GradeRecord]) -> dict[str, t.Any]:
     """Echo the cell's condition metadata (first record)."""
     if not records:
         return {}
@@ -107,8 +115,8 @@ def _median(values: list[float]) -> float | None:
 
 def _routing_report(
     runs_file: str,
-    records: list[t.Any],
-    chosen: dict[tuple[str, int], t.Any],
+    records: list[GradeRecord],
+    chosen: dict[tuple[str, int], GradeRecord],
 ) -> RoutingReport:
     """Derive the routing shapes from trigger-cell records.
 
@@ -119,7 +127,7 @@ def _routing_report(
     decision rule: a should-trigger task passes at hit-rate >= 0.5; a
     should-not task passes while its any-trigger rate stays <= 0.5.
     """
-    by_task: dict[str, list[t.Any]] = {}
+    by_task: dict[str, list[GradeRecord]] = {}
     for rec in chosen.values():
         by_task.setdefault(rec.task_id, []).append(rec)
     for recs in by_task.values():
@@ -129,7 +137,7 @@ def _routing_report(
         if name not in loaded:
             loaded.append(name)
 
-    def verdict(rec: t.Any) -> str | None:
+    def verdict(rec: GradeRecord) -> RunVerdict | None:
         if not rec.clean:
             return None
         expected = set(rec.expected_skills or [])
@@ -154,18 +162,18 @@ def _routing_report(
         if recs[0].expected_skills:
             # hit-rate over runs (verdict None = not clean = non-hit)
             hit_rate = sum(1 for r in runs if r.verdict == "hit") / n
-            decision: str = "PASS" if hit_rate >= 0.5 else "FAIL"
+            decision: Decision = "PASS" if hit_rate >= 0.5 else "FAIL"
         else:
             # should-not: nothing may fire; the any-trigger rate decides.
             trig_rate = sum(1 for r in runs if any(r.triggered.values())) / n
-            decision = "PASS" if trig_rate <= 0.5 else "FAIL"
+            decision: Decision = "PASS" if trig_rate <= 0.5 else "FAIL"
         task_rows.append(
             TaskRouting(
                 task_id=task_id,
                 query=recs[0].query,
                 expected_skills=recs[0].expected_skills or [],
                 runs=runs,
-                decision=decision,  # type: ignore[arg-type]
+                decision=decision,
             ),
         )
 
@@ -241,10 +249,12 @@ def build_grade_report(runs_file: str) -> GradeReport:
         msg = f"no parseable graded records in {runs_file}"
         raise ValueError(msg)
 
-    by_key: dict[tuple[str, int], list[t.Any]] = {}
+    by_key: dict[tuple[str, int], list[GradeRecord]] = {}
     for rec in records:
         by_key.setdefault((rec.task_id, rec.run), []).append(rec)
-    chosen = {k: select_attempt(v) for k, v in by_key.items()}
+    chosen: dict[tuple[str, int], GradeRecord] = {
+        k: select_attempt(v) for k, v in by_key.items()
+    }
 
     entries = [
         ReportEntry(

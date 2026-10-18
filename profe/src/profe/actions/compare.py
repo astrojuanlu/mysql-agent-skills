@@ -123,13 +123,33 @@ def compare_grade_runs(a_file: str, b_file: str) -> CompareReport:
         key: value
         for key, value in {
             "tokens": _median(
-                [p.b_total_tokens - p.a_total_tokens for p in pairs],
+                [
+                    p.b_total_tokens - p.a_total_tokens
+                    for p in pairs
+                    if p.b_total_tokens is not None and p.a_total_tokens is not None
+                ],
             ),
             "tool_calls": _median(
-                [p.b_tool_calls - p.a_tool_calls for p in pairs],
+                [
+                    p.b_tool_calls - p.a_tool_calls
+                    for p in pairs
+                    if p.b_tool_calls is not None and p.a_tool_calls is not None
+                ],
             ),
-            "dur_s": _median([p.b_dur_s - p.a_dur_s for p in pairs]),
-            "cost": _median([p.b_cost - p.a_cost for p in pairs]),
+            "dur_s": _median(
+                [
+                    p.b_dur_s - p.a_dur_s
+                    for p in pairs
+                    if p.b_dur_s is not None and p.a_dur_s is not None
+                ],
+            ),
+            "cost": _median(
+                [
+                    p.b_cost - p.a_cost
+                    for p in pairs
+                    if p.b_cost is not None and p.a_cost is not None
+                ],
+            ),
         }.items()
         if value is not None
     }

@@ -82,11 +82,19 @@ def skill_from_stem(stem: str) -> str | None:
 def build_queries(
     pairs: list[tuple[str | None, LegacyQuery]],
 ) -> list[Query]:
-    """Map (skill, legacy entry) pairs to current-format queries."""
+    """Map (skill, legacy entry) pairs to current-format queries.
+
+    A None skill (a set file whose name carries no skill and no --skill
+    was passed) never reaches a should-trigger entry: migrate_file's
+    fail-fast guard rejects that shape before the pairs are built —
+    the guard in the comprehension keeps the type honest about it.
+    """
     return [
         Query(
             query=entry.query,
-            expected_skills=[skill] if entry.should_trigger else [],
+            expected_skills=(
+                [skill] if entry.should_trigger and skill is not None else []
+            ),
         )
         for skill, entry in pairs
     ]
@@ -116,6 +124,10 @@ def migrate_file(  # noqa: PLR0911 — the fail-fast validation ladder is the po
         print(f"{path}: already in the current format, skipped")
         return 0
 
+    # The two branches build differently-typed pair lists (the corpus
+    # keys are always str; a set file's chosen skill may be None) — the
+    # annotation unifies them for build_queries.
+    pairs: list[tuple[str | None, LegacyQuery]]
     if isinstance(root, list):
         try:
             legacy = LegacySetFile.model_validate(root)

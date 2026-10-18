@@ -52,7 +52,7 @@ from pi_agent_json import (
     parse_pi_event,
 )
 
-from ..models import AttemptCore, EarlyExit, SkillRef, ToolCall
+from .models import AttemptCore, EarlyExit, SkillRef, ToolCall
 
 RUN_CWD = "/tmp"  # neutral: the skills repo's own files bias the agent
 
@@ -66,7 +66,9 @@ _KILL_GRACE_S = 5.0
 
 
 def _terminate_group(
-    proc: subprocess.Popen, stderr_tail: deque[str], grace_s: float = _KILL_GRACE_S
+    proc: subprocess.Popen[str],
+    stderr_tail: deque[str],
+    grace_s: float = _KILL_GRACE_S,
 ) -> None:
     """Kill pi and everything it spawned.
 
@@ -370,11 +372,15 @@ def run_attempt(  # noqa: PLR0913, PLR0912, PLR0915 — see docstring
         start_new_session=True,
         env=env,
     )
+    # both are PIPEs by construction; bind locals so the type checker
+    # narrows them (Popen's attributes are IO[str] | None unions)
+    stdout, stderr = proc.stdout, proc.stderr
+    assert stdout is not None and stderr is not None
     stderr_tail: deque[str] = deque(maxlen=_STDERR_LINES)
 
     def _drain_stderr() -> None:
         """Drain the child's stderr in a daemon thread (§4)."""
-        for errline in proc.stderr:
+        for errline in stderr:
             stderr_tail.append(errline.rstrip()[:_STDERR_CHARS])
 
     threading.Thread(target=_drain_stderr, daemon=True).start()
@@ -418,7 +424,7 @@ def run_attempt(  # noqa: PLR0913, PLR0912, PLR0915 — see docstring
     exit_code: int | None = None
     tee = None if stream_out is None else stream_out.open("w")
     try:
-        for raw_line in proc.stdout:
+        for raw_line in stdout:
             line = raw_line.strip()
             if not line:
                 continue
@@ -444,9 +450,9 @@ def run_attempt(  # noqa: PLR0913, PLR0912, PLR0915 — see docstring
         watchdog.cancel()
         if tee is not None:
             tee.close()
-        proc.stdout.close()
+        stdout.close()
         time.sleep(0.05)  # let the stderr thread drain the last lines
-        proc.stderr.close()
+        stderr.close()
 
     timed_out = watchdog_fired.is_set() and stop_reason is None
     # Our own group kills surface as exit -15/-9: by design (a stop

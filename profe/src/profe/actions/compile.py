@@ -29,16 +29,17 @@ from pathlib import Path
 import yaml
 from pydantic import ValidationError
 
-from ..models import (
+from ._utils import resolve_skills
+from .models import (
     CompileOptions,
     CompileStats,
     QueriesFile,
     Query,
     Rubric,
     RubricCheck,
+    SkillRef,
     Task,
 )
-from ._utils import resolve_skills
 
 
 def compile_trigger_cells(
@@ -75,11 +76,16 @@ def compile_trigger_cells(
             "trig-"
             + hashlib.sha256(json.dumps(list(expected)).encode()).hexdigest()[:8]
         )
-        rubric = Rubric(id=rubric_id, description=description, checks=checks)
+        rubric = Rubric(id=rubric_id, description=description, mechanical_checks=checks)
         path = rubrics_dir / f"{rubric_id}.yaml"
+        # safe_dump's stubs are untyped (Any); str() pins the write_text
+        # contract — the dump of a pydantic model is a str by construction.
         path.write_text(
-            yaml.safe_dump(
-                rubric.model_dump(mode="json", exclude_defaults=True), sort_keys=False
+            str(
+                yaml.safe_dump(
+                    rubric.model_dump(mode="json", exclude_defaults=True),
+                    sort_keys=False,
+                )
             ),
         )
         rubric_ids[expected] = rubric_id
@@ -118,7 +124,7 @@ def compile_trigger_cells(
     )
 
 
-def _check_queries(queries: list[Query], skills: list) -> None:
+def _check_queries(queries: list[Query], skills: list[SkillRef]) -> None:
     """Check that every expected skill is loaded.
 
     A query expecting a skill that is not loaded would silently never

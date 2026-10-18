@@ -41,10 +41,10 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
-from ..models import CaptureSidecar, RunOptions
 from . import _pi
 from ._utils import attempt_prompt, resolve_skills, run_precheck, stage_artifacts
 from .grade import load_tasks
+from .models import CaptureSidecar, RunOptions
 
 _PI_CONFIG_FILES = ("auth.json", "models.json", "models-store.json", "settings.json")
 

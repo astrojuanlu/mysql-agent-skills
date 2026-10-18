@@ -59,7 +59,9 @@ import yaml
 from pi_agent_json import PiSessionParseError, parse_session_entry
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..models import (
+from . import _pi
+from ._utils import resolve_skills
+from .models import (
     AttemptCore,
     CaptureSidecar,
     EarlyExit,
@@ -71,8 +73,6 @@ from ..models import (
     SkillRef,
     Task,
 )
-from . import _pi
-from ._utils import resolve_skills
 
 _VERDICT_FENCE = re.compile(r"```(?:yaml|json)\s*\n(.*?)```", re.DOTALL)
 
@@ -245,7 +245,9 @@ def _check(  # noqa: PLR0911 — one return per check type is the point
         return not any(triggered.values())
     value = _field_value(verdict, check.field)
     if check.type == "field_present":
-        return value is not None and value != ""
+        # str() pins the bool contract: value is Any (the verdict field
+        # is free-form), and nothing stringifies to "" except "" itself.
+        return value is not None and str(value) != ""
     if check.type == "field_equals":
         return value is not None and str(value).strip() == str(check.value)
     if check.type == "field_regex":
@@ -306,7 +308,7 @@ def apply_rubric(
     """Score every rubric check; the dict preserves check order."""
     return {
         check.id: _check(check, verdict, artifact_texts, precheck_json, triggered)
-        for check in rubric.checks
+        for check in rubric.mechanical_checks
     }
 
 
@@ -320,11 +322,11 @@ def rubric_expected_skills(rubric: Rubric) -> list[str] | None:
     list). This is what the record's `expected_skills` field is stamped
     from, so the report's routing shapes stay runs-file-only.
     """
-    for check in rubric.checks:
+    for check in rubric.mechanical_checks:
         if check.type == "triggered_none":
             return []
     skills: list[str] = []
-    for check in rubric.checks:
+    for check in rubric.mechanical_checks:
         if check.type == "triggered_any_of":
             skills.extend(check.patterns)
         elif check.type == "skill_triggered" and check.value is not False:
@@ -479,7 +481,7 @@ def _replay_attempt(  # noqa: PLR0913 — one capture bundle + replay knobs
                         f"unmodeled stream event: {line[:80]}"[: _pi._STDERR_CHARS],
                     )
                     agg.error_message = (
-                        "pi event stream parse error: unmodeled event in stream tee",
+                        "pi event stream parse error: unmodeled event in stream tee"
                     )
                     break
             else:

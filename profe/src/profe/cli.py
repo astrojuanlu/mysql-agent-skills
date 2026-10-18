@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import typing as t
 from collections.abc import Callable
 from pathlib import Path
 
@@ -21,13 +22,13 @@ from .actions import (
     validate_skills,
 )
 from .actions.compare import render_compare_table
-from .actions.report import render_report_markdown
-from .models import (
+from .actions.models import (
     CompileOptions,
     GradeOptions,
     RunOptions,
     ValidateOptions,
 )
+from .actions.report import render_report_markdown
 
 
 def _heartbeat(message: str) -> None:
@@ -399,7 +400,9 @@ def main(argv: list[str] | None = None) -> int:
     130 Ctrl-C (the runs file stays resumable).
     """
     args = build_parser().parse_args(argv)
-    func: Callable[[argparse.Namespace], int] = args.func
+    # argparse attaches .func via set_defaults — untypeable at the parser,
+    # so the cast documents the wire contract every subcommand obeys.
+    func = t.cast(Callable[[argparse.Namespace], int], args.func)
     try:
         return func(args)
     except ValueError as exc:
